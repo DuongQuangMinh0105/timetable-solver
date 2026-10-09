@@ -1,0 +1,48 @@
+[project]
+name = "timetable"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "nlakhoa123", email = "nlakhoa123@gmail.com" }
+]
+requires-python = ">=3.11"
+dependencies = [
+    "alembic>=1.20.0",
+    "fastapi>=0.143.0",
+    "openpyxl>=3.1.5",
+    "ortools>=9.15.6755",
+    "psycopg[binary]>=3.3.6",
+    "pydantic>=2.14.0",
+    "sqlalchemy>=2.1.4",
+    "uvicorn[standard]>=0.54.0",
+]
+
+[project.scripts]
+timetable = "timetable:main"
+
+[build-system]
+requires = ["uv_build>=0.12.24,<0.13.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "mypy>=2.4.0",
+    "pre-commit>=4.6.2",
+    "pytest>=9.1.1",
+    "ruff>=0.16.10",
+]
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.mypy]
+strict = true
+files = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
