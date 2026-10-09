@@ -1,4 +1,3 @@
-
 import os
 
 from dotenv import load_dotenv
@@ -14,9 +13,7 @@ def create_database_engine() -> Engine:
     database_url = os.getenv("DATABASE_URL")
 
     if not database_url:
-        raise RuntimeError(
-            "DATABASE_URL is missing. Please configure it in the .env file."
-        )
+        raise RuntimeError("DATABASE_URL is missing. Please configure it in the .env file.")
 
     return create_engine(
         database_url,
