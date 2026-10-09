@@ -1,0 +1,6 @@
+# Mặc định: bất kỳ thành viên nào cũng review được
+*                       @DuongQuangMinh0105 @tranphuoclong67-netizen @nlakhoa123 @lmthang10a7ankhanh-ui @DavidLee05
+
+# Hạ tầng và CI: chỉ 2 người phụ trách
+/.github/               @DuongQuangMinh0105 @nlakhoa123
+/infra/                 @DuongQuangMinh0105 @nlakhoa123
