@@ -14,6 +14,7 @@ dependencies = [
     "ortools>=9.15.6755",
     "psycopg[binary]>=3.3.6",
     "pydantic>=2.14.0",
+    "python-dotenv>=1.2.4",
     "sqlalchemy>=2.1.4",
     "uvicorn[standard]>=0.54.0",
 ]
