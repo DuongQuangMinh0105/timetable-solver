@@ -4,54 +4,84 @@
 
 | Symbol | Meaning |
 |---|---|
-| `u ∈ U` | Class / unit to be scheduled |
+| `u ∈ U` | Offering = one class taking one subject (class-subject pair) |
 | `d ∈ D` | Day of the week; `D_sat ⊂ D` is the set of Saturdays |
 | `p ∈ P` | Period (time slot) |
-| `r ∈ R` | Room |
-| `x[u,d,p,r]` | BoolVar = 1 if class `u` is held on day `d`, period `p`, in room `r` |
-| `use[u,r]` | BoolVar = 1 if class `u` uses room `r` in at least one period |
-| `extra_rooms[u]` | IntVar ≥ 0: number of distinct rooms class `u` uses, minus 1 |
+| `r ∈ R` | Room; `r_mba` = G316 |
+| `U_mba ⊂ U` | MBA offerings (must be in G316, hard constraint) |
+| `s[u,d,p,r]` | BoolVar = 1 if a session of `u` **starts** at day `d`, period `p`, room `r`. One session = a block of 2 consecutive periods |
+| `x[u,d,p,r]` | BoolVar = 1 if `u` is held at day `d`, period `p`, room `r` (derived from `s`) |
+| `use[u,r]` | BoolVar = 1 if offering `u` uses room `r` in at least one session |
+| `extra_rooms[u]` | IntVar ≥ 0: number of distinct rooms used by `u`, minus 1 |
 
-> The variable name `x[u,d,p,r]` must be agreed with P1 on day 2.
+> Variable names `x` and `s` must be agreed with P1 on day 2.
+> Link between them (owned by P1): `x[u,d,p,r] = s[u,d,p,r] + s[u,d,p-1,r]`.
+> The number of sessions per week is an input (`sessions_per_week[u]`), not a constant.
 
-## 2. RoomStability (room-change penalty)
+## 2. RoomStability
 
-Link `use` to `x` (one direction is enough because the problem is a minimization):
+Scope: room stability is per **offering** (one subject keeps one room).
+One direction of the link is enough because the problem is a minimization:
 
-    x[u,d,p,r] <= use[u,r]    for all u, d, p, r
-
-Extra rooms per class:
-
-    extra_rooms[u] = sum_r use[u,r] - 1
-
-Assumption: every class has at least one session, so `extra_rooms[u] >= 0`.
+    s[u,d,p,r] <= use[u,r]          for all u, d, p, r
+    extra_rooms[u] >= sum_r use[u,r] - 1
+    extra_rooms[u] >= 0
 
 Limitation: this penalizes the **number of distinct rooms**, not the number
-of room switches between consecutive periods.
+of room switches between sessions.
 
 ## 3. AvoidSaturday
 
-    sat_sessions = sum_{u, d in D_sat, p, r} x[u,d,p,r]
+    sat_sessions = sum_{u, d in D_sat, p, r} s[u,d,p,r]
 
-Each session scheduled on Saturday is penalized by `W_SAT`.
+Each **session** (2-period block) on Saturday is penalized by `W_SAT`.
+Counting `s` instead of `x` avoids penalizing a 2-period session twice.
+Periods 7-8 are never scheduled (hard constraint).
 
-## 4. Objective function
+## 4. PreferMbaRoom (G316 priority)
 
-    minimize  W_ROOM * sum_u extra_rooms[u]  +  W_SAT * sat_sessions
+G316 may host regular classes but MBA has priority:
 
+    g316_sessions = sum_{u not in U_mba, d, p} s[u,d,p,r_mba]
+
+Each non-MBA session in G316 is penalized by `W_G316`.
+
+## 5. Objective function
+
+    minimize  W_ROOM  * sum_u extra_rooms[u]
+            + W_SAT   * sat_sessions
+            + W_G316  * g316_sessions
+
+The solver code must return each term (`room_cost`, `sat_cost`, `g316_cost`)
+separately so that a schedule's penalty can be explained and weights tuned.
 Weights are integers (CP-SAT only supports integer coefficients).
 
-## 5. Initial weights
+## 6. Initial weights
 
 | Parameter | Value | Rationale |
 |---|---|---|
 | `W_ROOM` | 5 | Changing rooms is a mild inconvenience, acceptable when necessary |
-| `W_SAT` | 10 | Saturday classes are more inconvenient: one Saturday session equals two extra rooms |
+| `W_SAT` | 10 | One Saturday session equals two extra rooms |
+| `W_G316` | 2 | Mild: only keeps G316 free for MBA when other rooms are available |
 
-The 2:1 ratio is a heuristic starting point with no supporting data yet.
-It will be tuned after benchmarking on day 6.
+These ratios are heuristic starting points with no supporting data yet.
+They will be tuned after benchmarking on day 6.
 
-## 6. Scope
+## 7. Hard/soft boundary
+
+| Rule | Type |
+|---|---|
+| MBA offerings only in G316 | Hard |
+| G313 only for Design offerings | Hard |
+| G311, G312 never used for regular classes | Hard |
+| No sessions in periods 7-8 | Hard |
+| Class size 20-30 within room capacity | Hard |
+| Non-MBA offerings in G316 | **Soft** (`W_G316`) |
+| Saturday sessions | **Soft** (`W_SAT`) |
+| Offering changes room | **Soft** (`W_ROOM`) |
+
+## 8. Scope
 
 This document covers soft constraints only. Hard constraints (no room
-clash, no period clash, etc.) are specified in a separate document.
+clash, no period clash, teacher availability, 2-period blocks, rest rule, etc.)
+are specified in a separate document.
