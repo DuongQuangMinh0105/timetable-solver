@@ -2,4 +2,9 @@ from typing import Protocol
 
 
 class JobDispatcherPort(Protocol):
-    """Đẩy job giải vào hàng đợi. Hiện thực: local, Service Bus/Pub-Sub/SQS."""
+    """Yêu cầu chạy một job giải theo job_id.
+
+    Hiện thực: local (chạy worker cục bộ), Cloud Run Jobs, Container Apps Jobs.
+    """
+
+    def dispatch(self, job_id: str) -> None: ...
