@@ -17,7 +17,7 @@ class Validator:
     def validate(self, timetable: Any, rules: list[Any]) -> list[Violation]:
         """Thực hiện validate thời khóa biểu và trả về danh sách các vi phạm (nếu có)."""
         violations: list[Violation] = []
-        
+
         # Khung logic kiểm tra cơ bản (có thể mở rộng theo rule cụ thể)
         if not timetable:
             violations.append(
