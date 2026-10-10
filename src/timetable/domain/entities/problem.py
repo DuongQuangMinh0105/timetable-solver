@@ -18,3 +18,5 @@ class Problem:
     courses: tuple[Course, ...]
     lesson_units: tuple[LessonUnit, ...]
     grid: TimeGrid = field(default_factory=TimeGrid)
+    # Một lớp không học liên tiếp quá số tiết này (tính theo số thứ tự tiết, không xét nghỉ trưa).
+    max_consecutive_periods: int = 2

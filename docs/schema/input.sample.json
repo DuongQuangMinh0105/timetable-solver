@@ -1,0 +1,453 @@
+{
+  "schema_version": "0.1",
+  "_comment": "Dữ liệu mẫu. Danh sách phòng là phòng thật (sức chứa 30 là giá trị tạm); lớp, môn, giáo viên là ví dụ.",
+  "grid": {
+    "days": 6,
+    "periods": 8,
+    "allowed_periods": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ]
+  },
+  "rooms": [
+    {
+      "id": "G314",
+      "name": "G314",
+      "capacity": 30,
+      "room_type": "standard",
+      "also_supports": []
+    },
+    {
+      "id": "G317",
+      "name": "G317",
+      "capacity": 30,
+      "room_type": "standard",
+      "also_supports": []
+    },
+    {
+      "id": "G318",
+      "name": "G318",
+      "capacity": 30,
+      "room_type": "standard",
+      "also_supports": []
+    },
+    {
+      "id": "G319",
+      "name": "G319",
+      "capacity": 30,
+      "room_type": "standard",
+      "also_supports": []
+    },
+    {
+      "id": "G502",
+      "name": "G502",
+      "capacity": 30,
+      "room_type": "standard",
+      "also_supports": []
+    },
+    {
+      "id": "G503",
+      "name": "G503",
+      "capacity": 30,
+      "room_type": "standard",
+      "also_supports": []
+    },
+    {
+      "id": "G504",
+      "name": "G504",
+      "capacity": 30,
+      "room_type": "standard",
+      "also_supports": []
+    },
+    {
+      "id": "G508",
+      "name": "G508",
+      "capacity": 30,
+      "room_type": "standard",
+      "also_supports": []
+    },
+    {
+      "id": "G509",
+      "name": "G509",
+      "capacity": 30,
+      "room_type": "standard",
+      "also_supports": []
+    },
+    {
+      "id": "G510",
+      "name": "G510",
+      "capacity": 30,
+      "room_type": "standard",
+      "also_supports": []
+    },
+    {
+      "id": "G316",
+      "name": "G316",
+      "capacity": 30,
+      "room_type": "mba",
+      "also_supports": [
+        "standard"
+      ]
+    },
+    {
+      "id": "G313",
+      "name": "G313",
+      "capacity": 30,
+      "room_type": "art",
+      "also_supports": []
+    }
+  ],
+  "teachers": [
+    {
+      "id": "T01",
+      "name": "Giáo viên 1"
+    },
+    {
+      "id": "T02",
+      "name": "Giáo viên 2"
+    },
+    {
+      "id": "T03",
+      "name": "Giáo viên 3"
+    },
+    {
+      "id": "T04",
+      "name": "Giáo viên 4"
+    },
+    {
+      "id": "T05",
+      "name": "Giáo viên 5"
+    },
+    {
+      "id": "T06",
+      "name": "Giáo viên 6"
+    }
+  ],
+  "class_groups": [
+    {
+      "id": "C-A1",
+      "name": "Lớp thường A1",
+      "size": 28,
+      "kind": "regular"
+    },
+    {
+      "id": "C-A2",
+      "name": "Lớp thường A2",
+      "size": 25,
+      "kind": "regular"
+    },
+    {
+      "id": "C-MBA1",
+      "name": "Lớp MBA 1",
+      "size": 20,
+      "kind": "mba"
+    },
+    {
+      "id": "C-DES1",
+      "name": "Lớp Design 1",
+      "size": 22,
+      "kind": "art"
+    }
+  ],
+  "courses": [
+    {
+      "id": "M-A1-ENG",
+      "name": "Tiếng Anh",
+      "class_id": "C-A1",
+      "teacher_id": "T01",
+      "periods_per_week": 3,
+      "required_room_type": "standard"
+    },
+    {
+      "id": "M-A1-MATH",
+      "name": "Toán",
+      "class_id": "C-A1",
+      "teacher_id": "T02",
+      "periods_per_week": 3,
+      "required_room_type": "standard"
+    },
+    {
+      "id": "M-A1-IT",
+      "name": "Tin học",
+      "class_id": "C-A1",
+      "teacher_id": "T03",
+      "periods_per_week": 2,
+      "required_room_type": "standard"
+    },
+    {
+      "id": "M-A2-ENG",
+      "name": "Tiếng Anh",
+      "class_id": "C-A2",
+      "teacher_id": "T01",
+      "periods_per_week": 3,
+      "required_room_type": "standard"
+    },
+    {
+      "id": "M-A2-MATH",
+      "name": "Toán",
+      "class_id": "C-A2",
+      "teacher_id": "T02",
+      "periods_per_week": 3,
+      "required_room_type": "standard"
+    },
+    {
+      "id": "M-A2-IT",
+      "name": "Tin học",
+      "class_id": "C-A2",
+      "teacher_id": "T03",
+      "periods_per_week": 2,
+      "required_room_type": "standard"
+    },
+    {
+      "id": "M-MBA-MGT",
+      "name": "Quản trị",
+      "class_id": "C-MBA1",
+      "teacher_id": "T04",
+      "periods_per_week": 2,
+      "required_room_type": "mba"
+    },
+    {
+      "id": "M-MBA-FIN",
+      "name": "Tài chính",
+      "class_id": "C-MBA1",
+      "teacher_id": "T05",
+      "periods_per_week": 2,
+      "required_room_type": "mba"
+    },
+    {
+      "id": "M-DES-DRAW",
+      "name": "Vẽ",
+      "class_id": "C-DES1",
+      "teacher_id": "T06",
+      "periods_per_week": 3,
+      "required_room_type": "art"
+    },
+    {
+      "id": "M-DES-ENG",
+      "name": "Tiếng Anh",
+      "class_id": "C-DES1",
+      "teacher_id": "T01",
+      "periods_per_week": 2,
+      "required_room_type": "standard"
+    }
+  ],
+  "lesson_units": [
+    {
+      "id": "M-A1-ENG-0",
+      "course_id": "M-A1-ENG",
+      "class_id": "C-A1",
+      "teacher_id": "T01",
+      "index": 0,
+      "required_room_type": "standard"
+    },
+    {
+      "id": "M-A1-ENG-1",
+      "course_id": "M-A1-ENG",
+      "class_id": "C-A1",
+      "teacher_id": "T01",
+      "index": 1,
+      "required_room_type": "standard"
+    },
+    {
+      "id": "M-A1-ENG-2",
+      "course_id": "M-A1-ENG",
+      "class_id": "C-A1",
+      "teacher_id": "T01",
+      "index": 2,
+      "required_room_type": "standard"
+    },
+    {
+      "id": "M-A1-MATH-0",
+      "course_id": "M-A1-MATH",
+      "class_id": "C-A1",
+      "teacher_id": "T02",
+      "index": 0,
+      "required_room_type": "standard"
+    },
+    {
+      "id": "M-A1-MATH-1",
+      "course_id": "M-A1-MATH",
+      "class_id": "C-A1",
+      "teacher_id": "T02",
+      "index": 1,
+      "required_room_type": "standard"
+    },
+    {
+      "id": "M-A1-MATH-2",
+      "course_id": "M-A1-MATH",
+      "class_id": "C-A1",
+      "teacher_id": "T02",
+      "index": 2,
+      "required_room_type": "standard"
+    },
+    {
+      "id": "M-A1-IT-0",
+      "course_id": "M-A1-IT",
+      "class_id": "C-A1",
+      "teacher_id": "T03",
+      "index": 0,
+      "required_room_type": "standard"
+    },
+    {
+      "id": "M-A1-IT-1",
+      "course_id": "M-A1-IT",
+      "class_id": "C-A1",
+      "teacher_id": "T03",
+      "index": 1,
+      "required_room_type": "standard"
+    },
+    {
+      "id": "M-A2-ENG-0",
+      "course_id": "M-A2-ENG",
+      "class_id": "C-A2",
+      "teacher_id": "T01",
+      "index": 0,
+      "required_room_type": "standard"
+    },
+    {
+      "id": "M-A2-ENG-1",
+      "course_id": "M-A2-ENG",
+      "class_id": "C-A2",
+      "teacher_id": "T01",
+      "index": 1,
+      "required_room_type": "standard"
+    },
+    {
+      "id": "M-A2-ENG-2",
+      "course_id": "M-A2-ENG",
+      "class_id": "C-A2",
+      "teacher_id": "T01",
+      "index": 2,
+      "required_room_type": "standard"
+    },
+    {
+      "id": "M-A2-MATH-0",
+      "course_id": "M-A2-MATH",
+      "class_id": "C-A2",
+      "teacher_id": "T02",
+      "index": 0,
+      "required_room_type": "standard"
+    },
+    {
+      "id": "M-A2-MATH-1",
+      "course_id": "M-A2-MATH",
+      "class_id": "C-A2",
+      "teacher_id": "T02",
+      "index": 1,
+      "required_room_type": "standard"
+    },
+    {
+      "id": "M-A2-MATH-2",
+      "course_id": "M-A2-MATH",
+      "class_id": "C-A2",
+      "teacher_id": "T02",
+      "index": 2,
+      "required_room_type": "standard"
+    },
+    {
+      "id": "M-A2-IT-0",
+      "course_id": "M-A2-IT",
+      "class_id": "C-A2",
+      "teacher_id": "T03",
+      "index": 0,
+      "required_room_type": "standard"
+    },
+    {
+      "id": "M-A2-IT-1",
+      "course_id": "M-A2-IT",
+      "class_id": "C-A2",
+      "teacher_id": "T03",
+      "index": 1,
+      "required_room_type": "standard"
+    },
+    {
+      "id": "M-MBA-MGT-0",
+      "course_id": "M-MBA-MGT",
+      "class_id": "C-MBA1",
+      "teacher_id": "T04",
+      "index": 0,
+      "required_room_type": "mba"
+    },
+    {
+      "id": "M-MBA-MGT-1",
+      "course_id": "M-MBA-MGT",
+      "class_id": "C-MBA1",
+      "teacher_id": "T04",
+      "index": 1,
+      "required_room_type": "mba"
+    },
+    {
+      "id": "M-MBA-FIN-0",
+      "course_id": "M-MBA-FIN",
+      "class_id": "C-MBA1",
+      "teacher_id": "T05",
+      "index": 0,
+      "required_room_type": "mba"
+    },
+    {
+      "id": "M-MBA-FIN-1",
+      "course_id": "M-MBA-FIN",
+      "class_id": "C-MBA1",
+      "teacher_id": "T05",
+      "index": 1,
+      "required_room_type": "mba"
+    },
+    {
+      "id": "M-DES-DRAW-0",
+      "course_id": "M-DES-DRAW",
+      "class_id": "C-DES1",
+      "teacher_id": "T06",
+      "index": 0,
+      "required_room_type": "art"
+    },
+    {
+      "id": "M-DES-DRAW-1",
+      "course_id": "M-DES-DRAW",
+      "class_id": "C-DES1",
+      "teacher_id": "T06",
+      "index": 1,
+      "required_room_type": "art"
+    },
+    {
+      "id": "M-DES-DRAW-2",
+      "course_id": "M-DES-DRAW",
+      "class_id": "C-DES1",
+      "teacher_id": "T06",
+      "index": 2,
+      "required_room_type": "art"
+    },
+    {
+      "id": "M-DES-ENG-0",
+      "course_id": "M-DES-ENG",
+      "class_id": "C-DES1",
+      "teacher_id": "T01",
+      "index": 0,
+      "required_room_type": "standard"
+    },
+    {
+      "id": "M-DES-ENG-1",
+      "course_id": "M-DES-ENG",
+      "class_id": "C-DES1",
+      "teacher_id": "T01",
+      "index": 1,
+      "required_room_type": "standard"
+    }
+  ],
+  "constraints": {
+    "max_consecutive_periods": 2
+  },
+  "soft_weights": {
+    "avoid_saturday": 10,
+    "room_stability": 5,
+    "reserve_mba_room": 2
+  },
+  "solver": {
+    "time_limit_s": 60,
+    "num_workers": 8,
+    "random_seed": 0
+  }
+}
