@@ -40,5 +40,23 @@ services:
       postgres:
         condition: service_healthy
 
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: timetable-worker
+    environment:
+      DATABASE_URL: postgresql+psycopg://timetable:timetable_dev@postgres:5432/timetable
+    command:
+      - uv
+      - run
+      - --no-sync
+      - python
+      - -m
+      - timetable.interfaces.worker.main
+    depends_on:
+      postgres:
+        condition: service_healthy  
+
 volumes:
   postgres_data:
