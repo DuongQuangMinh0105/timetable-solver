@@ -7,8 +7,15 @@ logger = logging.getLogger("timetable.worker")
 
 
 def main() -> None:
-    """Worker tạm: chạy lên, ghi log, chờ. Sẽ nối SolveTimetable ở Ngày 6."""
-    logger.info("Worker started. JOB_ID=%s", os.getenv("JOB_ID", "<none>"))
+    """Worker tạm. Có JOB_ID: ghi log rồi thoát. Không có: chờ (dùng cho compose).
+
+    Sẽ nối SolveTimetable ở Ngày 6.
+    """
+    job_id = os.getenv("JOB_ID")
+    logger.info("Worker started. JOB_ID=%s", job_id or "<none>")
+    if job_id:
+        logger.info("Job %s: chưa nối SolveTimetable, thoát.", job_id)
+        return
     while True:
         time.sleep(30)
 
