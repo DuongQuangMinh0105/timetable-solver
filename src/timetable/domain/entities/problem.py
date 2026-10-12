@@ -20,3 +20,7 @@ class Problem:
     grid: TimeGrid = field(default_factory=TimeGrid)
     # Một lớp không học liên tiếp quá số tiết này (tính theo số thứ tự tiết, không xét nghỉ trưa).
     max_consecutive_periods: int = 2
+    # Tiết bắt đầu cho phép của block từ 2 tiết trở lên (đánh số từ 0).
+    # None: bắt đầu ở tiết nào cũng được miễn mọi tiết bị chiếm đều hợp lệ.
+    # Ví dụ (0, 2, 4): chỉ block căn cặp 1-2, 3-4, 5-6.
+    block_starts: tuple[int, ...] | None = None

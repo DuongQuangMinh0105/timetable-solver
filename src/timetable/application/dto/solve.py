@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import StrEnum
 
 from timetable.domain.entities import Timetable
@@ -24,4 +24,6 @@ class SolveResult:
     status: SolveStatus
     timetable: Timetable | None = None
     objective: float | None = None
+    # Giá trị từng số hạng của hàm mục tiêu (room, sat, g316...), nếu có.
+    cost_terms: dict[str, int] = field(default_factory=dict)
     # SolveStats (thời gian, số biến, ...) sẽ được P2 bổ sung sau.

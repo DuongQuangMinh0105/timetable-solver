@@ -3,10 +3,15 @@ from collections.abc import Sequence
 from ortools.sat.python import cp_model
 
 from timetable.domain.entities import Problem
-from timetable.infrastructure.solver.encoder import ConstraintEncoder, ModelContext
+from timetable.infrastructure.solver.encoder import (
+    ConstraintEncoder,
+    ModelContext,
+    ObjectiveApplier,
+)
 from timetable.infrastructure.solver.hard_encoders import (
     ClassNoOverlapEncoder,
     EachUnitOnceEncoder,
+    MaxConsecutiveEncoder,
     RoomNoOverlapEncoder,
     TeacherNoOverlapEncoder,
 )
@@ -20,18 +25,28 @@ def default_hard_encoders() -> list[ConstraintEncoder]:
         RoomNoOverlapEncoder(),
         TeacherNoOverlapEncoder(),
         ClassNoOverlapEncoder(),
+        MaxConsecutiveEncoder(),
     ]
 
 
 def build_model(
-    problem: Problem, encoders: Sequence[ConstraintEncoder] | None = None
+    problem: Problem,
+    encoders: Sequence[ConstraintEncoder] | None = None,
+    *,
+    soft_encoders: Sequence[ConstraintEncoder] = (),
+    objective: ObjectiveApplier | None = None,
 ) -> ModelContext:
-    """Dựng mô hình CP-SAT: tạo biến rồi áp dụng lần lượt các encoder.
+    """Dựng mô hình CP-SAT.
 
-    Không tự thêm hàm mục tiêu. ObjectiveBuilder (P2) đọc `ctx.penalties` sau khi dựng xong.
+    Thứ tự: tạo biến, ràng buộc cứng (`encoders`, mặc định là `default_hard_encoders()`),
+    ràng buộc mềm (`soft_encoders`, ghi `ctx.penalties`), cuối cùng hàm mục tiêu (`objective`).
     """
     ctx = ModelContext(problem=problem, model=cp_model.CpModel())
     create_decision_variables(ctx)
     for encoder in default_hard_encoders() if encoders is None else encoders:
         encoder.encode(ctx)
+    for soft in soft_encoders:
+        soft.encode(ctx)
+    if objective is not None:
+        objective.apply(ctx)
     return ctx
