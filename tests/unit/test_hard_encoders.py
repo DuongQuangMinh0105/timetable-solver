@@ -1,85 +1,29 @@
 import pytest
 
-from timetable.application.dto.solve import SolveOptions, SolveResult, SolveStatus
-from timetable.domain.entities import (
-    ClassGroup,
-    Course,
-    LessonUnit,
-    Problem,
-    Room,
-    Slot,
-    Teacher,
-    TimeGrid,
-    Timetable,
+from solver_helpers import (
+    ONE_SLOT,
+    STANDARD_ROOMS,
+    TWO_SLOTS,
+    check_valid,
+    make_problem,
+    solve,
+    unit,
 )
+from timetable.application.dto.solve import SolveOptions, SolveStatus
+from timetable.domain.entities import Problem, Room
 from timetable.infrastructure.solver.builder import build_model, default_hard_encoders
 from timetable.infrastructure.solver.cpsat_solver import CpSatSolver
-
-ONE_SLOT = TimeGrid(days=1, periods=1, allowed_periods=(0,), period_times=())
-TWO_SLOTS = TimeGrid(days=1, periods=2, allowed_periods=(0, 1), period_times=())
-OPTIONS = SolveOptions(time_limit_s=30, num_workers=1)
-
-STANDARD_ROOMS = (Room("R1", "R1", 30), Room("R2", "R2", 30))
-
-
-def unit(uid: str, cls: str, teacher: str, room_type: str = "standard") -> LessonUnit:
-    return LessonUnit(
-        id=uid, course_id=f"M-{uid}", class_id=cls, teacher_id=teacher, required_room_type=room_type
-    )
-
-
-def make_problem(
-    units: list[LessonUnit],
-    rooms: tuple[Room, ...] = STANDARD_ROOMS,
-    grid: TimeGrid = ONE_SLOT,
-    class_size: int = 20,
-) -> Problem:
-    class_ids = sorted({u.class_id for u in units})
-    teacher_ids = sorted({u.teacher_id for u in units})
-    return Problem(
-        rooms=rooms,
-        teachers=tuple(Teacher(t, t) for t in teacher_ids),
-        class_groups=tuple(ClassGroup(c, c, class_size) for c in class_ids),
-        courses=tuple(Course(f"M-{u.id}", u.id, u.class_id, u.teacher_id, 1) for u in units),
-        lesson_units=tuple(units),
-        grid=grid,
-    )
-
-
-def solve(problem: Problem) -> SolveResult:
-    return CpSatSolver().solve(problem, OPTIONS)
-
-
-def check_valid(problem: Problem, timetable: Timetable) -> None:
-    """Kiểm tra độc lập (không dùng mô hình) rằng lịch thỏa các ràng buộc cứng."""
-    units = {u.id: u for u in problem.lesson_units}
-    rooms = {r.id: r for r in problem.rooms}
-    classes = {c.id: c for c in problem.class_groups}
-    assert {a.unit_id for a in timetable.assignments} == set(units)
-    assert len(timetable.assignments) == len(units)
-
-    used_room: set[tuple[str, int, int]] = set()
-    used_teacher: set[tuple[str, int, int]] = set()
-    used_class: set[tuple[str, int, int]] = set()
-    for a in timetable.assignments:
-        u = units[a.unit_id]
-        room = rooms[a.room_id]
-        assert problem.grid.contains(Slot(a.day, a.period))
-        assert room.can_host(u.required_room_type)
-        assert room.capacity >= classes[u.class_id].size
-        for used, owner in (
-            (used_room, a.room_id),
-            (used_teacher, u.teacher_id),
-            (used_class, u.class_id),
-        ):
-            key = (owner, a.day, a.period)
-            assert key not in used, f"trùng {key}"
-            used.add(key)
 
 
 def test_default_encoder_names() -> None:
     names = [e.name for e in default_hard_encoders()]
-    assert names == ["each_unit_once", "room_no_overlap", "teacher_no_overlap", "class_no_overlap"]
+    assert names == [
+        "each_unit_once",
+        "room_no_overlap",
+        "teacher_no_overlap",
+        "class_no_overlap",
+        "max_consecutive_periods",
+    ]
 
 
 def test_variables_only_for_allowed_rooms_and_periods(sample_problem: Problem) -> None:
