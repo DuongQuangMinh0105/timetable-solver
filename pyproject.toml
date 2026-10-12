@@ -33,7 +33,7 @@ dev = [
     "mypy>=2.4.0",
     "pre-commit>=4.6.2",
     "pytest>=9.1.1",
-    "ruff>=0.16.10",
+    "ruff>=0.17.00",
 ]
 
 [tool.ruff]
@@ -49,3 +49,4 @@ files = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["src"]
