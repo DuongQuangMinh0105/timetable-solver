@@ -4,7 +4,8 @@ from timetable.infrastructure.generator import generate_v0
 
 def test_validator_empty_timetable() -> None:
     validator = Validator()
-    violations = validator.validate(timetable=None, rules=[])
+    # Bỏ truyền tham số rules=[] đi vì validate() hiện tại chỉ nhận timetable
+    violations = validator.validate(timetable=[])
     assert len(violations) == 1
     assert violations[0].rule_id == "TIMETABLE_EMPTY"
 
