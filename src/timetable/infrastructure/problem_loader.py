@@ -1,0 +1,69 @@
+import json
+from pathlib import Path
+from typing import Any
+
+from timetable.application.dto.solve import SolveOptions
+from timetable.domain.entities import (
+    ClassGroup,
+    Course,
+    LessonUnit,
+    Problem,
+    Room,
+    Teacher,
+    TimeGrid,
+)
+from timetable.domain.services.unit_splitter import lesson_units_for_course
+
+
+def problem_from_dict(data: dict[str, Any]) -> Problem:
+    """Dựng `Problem` từ dữ liệu theo schema `docs/schema/input.sample.json`.
+
+    Nếu không có `lesson_units` (hoặc rỗng), các ca học được tách từ `courses` theo quy tắc block
+    (3 tiết -> 2+1). `constraints.block_starts` (tùy chọn) giới hạn tiết bắt đầu của block 2 tiết.
+    """
+    grid = data["grid"]
+    courses = tuple(Course(**c) for c in data["courses"])
+    if data.get("lesson_units"):
+        units = tuple(LessonUnit(**u) for u in data["lesson_units"])
+    else:
+        units = tuple(u for course in courses for u in lesson_units_for_course(course))
+    constraints = data.get("constraints", {})
+    block_starts = constraints.get("block_starts")
+    return Problem(
+        rooms=tuple(
+            Room(
+                id=r["id"],
+                name=r["name"],
+                capacity=r["capacity"],
+                room_type=r.get("room_type", "standard"),
+                also_supports=tuple(r.get("also_supports", ())),
+            )
+            for r in data["rooms"]
+        ),
+        teachers=tuple(Teacher(**t) for t in data["teachers"]),
+        class_groups=tuple(ClassGroup(**c) for c in data["class_groups"]),
+        courses=courses,
+        lesson_units=units,
+        grid=TimeGrid(
+            days=grid["days"],
+            periods=grid["periods"],
+            allowed_periods=tuple(grid["allowed_periods"]),
+        ),
+        max_consecutive_periods=constraints.get("max_consecutive_periods", 2),
+        block_starts=None if block_starts is None else tuple(block_starts),
+    )
+
+
+def solve_options_from_dict(data: dict[str, Any]) -> SolveOptions:
+    """Đọc `solver` trong dữ liệu đầu vào; thiếu khóa nào dùng mặc định của `SolveOptions`."""
+    cfg = data.get("solver", {})
+    default = SolveOptions()
+    return SolveOptions(
+        time_limit_s=cfg.get("time_limit_s", default.time_limit_s),
+        num_workers=cfg.get("num_workers", default.num_workers),
+        random_seed=cfg.get("random_seed", default.random_seed),
+    )
+
+
+def load_problem(path: Path) -> Problem:
+    return problem_from_dict(json.loads(path.read_text(encoding="utf-8")))
