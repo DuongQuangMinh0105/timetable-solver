@@ -22,5 +22,6 @@ def test_dispatch_failure_raises() -> None:
         dispatcher.dispatch("job-1")
 
 
-def test_default_command_runs_worker_and_exits() -> None:
-    LocalJobDispatcher(wait=True).dispatch("job-abc")
+def test_default_command_fails_on_invalid_job_id() -> None:
+    with pytest.raises(subprocess.CalledProcessError):
+        LocalJobDispatcher(wait=True).dispatch("job-abc")
