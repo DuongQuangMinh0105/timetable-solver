@@ -1,4 +1,3 @@
-
 from uuid import UUID
 
 from sqlalchemy import String, Text
@@ -20,8 +19,9 @@ class JobModel(Base):
     status: Mapped[str] = mapped_column(String(20), nullable=False)
     input_ref: Mapped[str] = mapped_column(Text, nullable=False)
     result_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
-    
-#Đây là model database, 
+
+
+# Đây là model database,
 # không phải domain entity.
 #  Chúng ta dùng String cho status để lưu các giá trị
 #  như queued, running, completed, failed. result_ref cho phép NULL
