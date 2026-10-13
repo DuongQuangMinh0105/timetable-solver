@@ -35,7 +35,7 @@ class Validator:
         for entry in timetable:
             period_val = entry.get("period", 0)
             period = int(period_val) if isinstance(period_val, int) else 0
-            
+
             room_val = entry.get("room")
             teacher_val = entry.get("teacher")
             class_group_val = entry.get("class_group")
