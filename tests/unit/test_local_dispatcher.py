@@ -23,4 +23,8 @@ def test_dispatch_failure_raises() -> None:
 
 
 def test_default_command_runs_worker_and_exits() -> None:
-    LocalJobDispatcher(wait=True).dispatch("job-abc")
+    dispatcher = LocalJobDispatcher(
+        [sys.executable, "-c", "import os; assert os.environ['JOB_ID'] == 'job-abc'"],
+        wait=True,
+    )
+    dispatcher.dispatch("job-abc")
