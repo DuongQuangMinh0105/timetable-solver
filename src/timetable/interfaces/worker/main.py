@@ -5,7 +5,9 @@ from pathlib import Path
 from uuid import UUID
 
 from timetable.application.use_cases.run_job import RunJob
-from timetable.infrastructure.solver.fake import fake_handler
+from timetable.domain.services.timetable_checker import check_timetable
+from timetable.infrastructure.solver.cpsat_solver import CpSatSolver
+from timetable.infrastructure.solver.solve_handler import make_solve_handler
 from timetable.infrastructure.storage.local import LocalStorage
 
 logging.basicConfig(
@@ -18,7 +20,7 @@ IDLE_SLEEP_SECONDS = 3600
 
 
 def build_use_case() -> RunJob:
-    """Dựng RunJob với Postgres và storage cục bộ.
+    """Dựng RunJob với Postgres, storage cục bộ và bộ giải CP-SAT thật.
 
     Import repository ở đây (không để đầu file) vì database.py cần
     DATABASE_URL ngay khi import.
@@ -26,7 +28,8 @@ def build_use_case() -> RunJob:
     from timetable.infrastructure.persistence.job_repository import JobRepository
 
     storage = LocalStorage(Path(os.getenv("STORAGE_DIR", "data/storage")))
-    return RunJob(JobRepository(), storage, fake_handler)
+    handler = make_solve_handler(CpSatSolver(), check_timetable)
+    return RunJob(JobRepository(), storage, handler)
 
 
 def wait_forever() -> None:
