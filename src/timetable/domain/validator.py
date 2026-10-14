@@ -40,7 +40,7 @@ def _check_max_consecutive(
         sorted_p = sorted(periods)
         run = 1
         flagged = False
-        for prev, cur in zip(sorted_p, sorted_p[1:]):
+        for prev, cur in zip(sorted_p, sorted_p[1:], strict=False):
             if cur == prev + 1:
                 run += 1
                 if run > max_run and not flagged:
@@ -149,7 +149,10 @@ class Validator:
                         violations.append(
                             Violation(
                                 rule_id="ROOM_CONFLICT",
-                                description=f"Phòng {room} bị trùng lịch ở ngày {day}, tiết {curr_period}.",
+                                description=(
+                        f"Phòng {room} bị trùng lịch ở ngày {day}, "
+                        f"tiết {curr_period}."
+                    ),
                                 severity="HARD",
                             )
                         )
@@ -162,7 +165,10 @@ class Validator:
                         violations.append(
                             Violation(
                                 rule_id="TEACHER_CONFLICT",
-                                description=f"Giáo viên {teacher} bị trùng lịch ở ngày {day}, tiết {curr_period}.",
+                                description=(
+                        f"Phòng {room} bị trùng lịch ở ngày {day}, "
+                        f"tiết {curr_period}."
+                    ),
                                 severity="HARD",
                             )
                         )
@@ -175,7 +181,10 @@ class Validator:
                         violations.append(
                             Violation(
                                 rule_id="CLASS_CONFLICT",
-                                description=f"Lớp {class_group} bị trùng lịch ở ngày {day}, tiết {curr_period}.",
+                                description=(
+                        f"Phòng {room} bị trùng lịch ở ngày {day}, "
+                        f"tiết {curr_period}."
+                    ),
                                 severity="HARD",
                             )
                         )
