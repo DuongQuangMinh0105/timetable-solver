@@ -1,4 +1,3 @@
-
 from timetable.application.use_cases.submit_solve_job import SubmitSolveJob
 from timetable.container import create_submit_solve_job
 

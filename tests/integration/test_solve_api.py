@@ -1,4 +1,3 @@
-
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
@@ -51,9 +50,7 @@ def test_post_solve_returns_202_and_job_id() -> None:
                     }
                 ],
                 "teachers": [{"id": "teacher-1", "name": "Teacher 1"}],
-                "class_groups": [
-                    {"id": "class-1", "name": "Class 1", "size": 25}
-                ],
+                "class_groups": [{"id": "class-1", "name": "Class 1", "size": 25}],
                 "courses": [
                     {
                         "id": "course-1",

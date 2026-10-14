@@ -1,4 +1,3 @@
-
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, status
@@ -37,5 +36,5 @@ def submit_solve(
     result = use_case.execute(request.model_dump(mode="json"))
 
     return SolveAcceptedResponse(
-    job_id=result.job_id,
-)
+        job_id=result.job_id,
+    )
