@@ -5,11 +5,11 @@ from timetable.domain.entities import (
     LessonUnit,
     Problem,
     Room,
-    Slot,
     Teacher,
     TimeGrid,
     Timetable,
 )
+from timetable.domain.services.timetable_checker import check_timetable
 from timetable.infrastructure.solver.cpsat_solver import CpSatSolver
 
 ONE_SLOT = TimeGrid(days=1, periods=1, allowed_periods=(0,), period_times=())
@@ -63,46 +63,7 @@ def solve(problem: Problem) -> SolveResult:
     return CpSatSolver().solve(problem, OPTIONS)
 
 
-def longest_run(periods: list[int]) -> int:
-    """Độ dài chuỗi tiết liền nhau dài nhất trong danh sách chỉ số tiết."""
-    best = run = 0
-    previous: int | None = None
-    for p in sorted(periods):
-        run = run + 1 if previous is not None and p == previous + 1 else 1
-        best = max(best, run)
-        previous = p
-    return best
-
-
 def check_valid(problem: Problem, timetable: Timetable) -> None:
     """Kiểm tra độc lập (không dùng mô hình) rằng lịch thỏa các ràng buộc cứng."""
-    units = {u.id: u for u in problem.lesson_units}
-    rooms = {r.id: r for r in problem.rooms}
-    classes = {c.id: c for c in problem.class_groups}
-    assert {a.unit_id for a in timetable.assignments} == set(units)
-    assert len(timetable.assignments) == len(units)
-
-    used_room: set[tuple[str, int, int]] = set()
-    used_teacher: set[tuple[str, int, int]] = set()
-    used_class: set[tuple[str, int, int]] = set()
-    class_periods: dict[tuple[str, int], list[int]] = {}
-    for a in timetable.assignments:
-        u = units[a.unit_id]
-        room = rooms[a.room_id]
-        assert problem.grid.contains(Slot(a.day, a.period))
-        assert room.can_host(u.required_room_type)
-        assert room.capacity >= classes[u.class_id].size
-        for q in range(a.period, a.period + u.duration):
-            assert q in problem.grid.allowed_periods
-            for used, owner in (
-                (used_room, a.room_id),
-                (used_teacher, u.teacher_id),
-                (used_class, u.class_id),
-            ):
-                key = (owner, a.day, q)
-                assert key not in used, f"trùng {key}"
-                used.add(key)
-            class_periods.setdefault((u.class_id, a.day), []).append(q)
-
-    for (class_id, day), periods in class_periods.items():
-        assert longest_run(periods) <= problem.max_consecutive_periods, (class_id, day, periods)
+    violations = check_timetable(problem, timetable)
+    assert not violations, [f"{v.rule_id}: {v.description}" for v in violations]

@@ -22,11 +22,6 @@ class ModelContext:
     # Từng số hạng của hàm mục tiêu (room, sat, g316...), để giải thích điểm phạt của một lịch.
     cost_terms: dict[str, object] = field(default_factory=dict)
 
-    @property
-    def x(self) -> dict[VarKey, cp_model.IntVar]:
-        """Tên cũ của `s` (giữ để tương thích ngược)."""
-        return self.s
-
 
 class ConstraintEncoder(Protocol):
     """Mỗi ràng buộc (cứng hoặc mềm) là một encoder thêm điều kiện vào mô hình."""

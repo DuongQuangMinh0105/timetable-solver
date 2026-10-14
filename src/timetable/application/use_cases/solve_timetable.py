@@ -4,7 +4,7 @@ from timetable.application.dto.solve import SolveOptions, SolveResult, SolveStat
 from timetable.application.ports.solver import SolverPort
 from timetable.application.ports.timetable_checker import TimetableChecker
 from timetable.domain.entities import Problem
-from timetable.domain.validator import Violation
+from timetable.domain.violation import Violation
 
 
 @dataclass(frozen=True, slots=True)
