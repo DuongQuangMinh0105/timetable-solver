@@ -12,7 +12,8 @@ def create_submit_solve_job() -> SubmitSolveJob:
     from timetable.infrastructure.persistence.job_repository import JobRepository
     from timetable.infrastructure.storage.local import LocalStorage
 
-    storage_root = Path(os.getenv("STORAGE_ROOT", "var/storage"))
+    # Dùng chung biến STORAGE_DIR với worker để API và worker cùng nhìn một thư mục.
+    storage_root = Path(os.getenv("STORAGE_DIR", "data/storage"))
 
     return SubmitSolveJob(
         repository=JobRepository(),

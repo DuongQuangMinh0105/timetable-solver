@@ -59,23 +59,47 @@ Dừng bằng `make down` (hoặc `docker compose down`), xem log bằng `make l
 
 ## Chạy thử một job (end-to-end)
 
-Với compose đang chạy:
+Với compose đang chạy, có hai cách. Cả hai đều chạy bộ giải CP-SAT thật.
+
+**Cách 1: gửi bài toán qua API.** API lưu input, tạo job và tự chạy worker (tiến trình con trong container `api`):
+
+```powershell
+curl.exe -X POST http://localhost:8000/solve -H "Content-Type: application/json" --data-binary "@docs/schema/input.sample.json"
+```
+
+Kết quả trả về mã 202 kèm `job_id`. Chờ vài giây rồi xem trạng thái:
+
+```powershell
+docker compose exec postgres psql -U timetable -d timetable -c "select id, status, result_ref from jobs order by id desc limit 3;"
+```
+
+**Cách 2: tạo job mẫu rồi chạy worker bằng tay:**
 
 ```powershell
 $env:DATABASE_URL = "postgresql+psycopg://timetable:timetable_dev@localhost:5432/timetable"
 $id = (uv run python scripts/seed_job.py).Trim()
 docker compose run --rm -e JOB_ID=$id worker
-docker compose exec postgres psql -U timetable -d timetable -c "select id, status, result_ref from jobs order by id desc limit 3;"
-dir data\storage\jobs\$id
 ```
 
-Mong đợi: trạng thái `completed` và file `result.json` trong `data/storage/jobs/<id>/`. Hiện worker dùng solver giả, sẽ thay bằng `SolveTimetable` ở bước sau.
+`seed_job.py` nhận thêm đường dẫn file input (mặc định `docs/schema/input.sample.json`).
+
+Kiểm tra kết quả (thay `<id>` bằng `job_id` ở cách 1, hoặc dùng `$id` ở cách 2):
+
+```powershell
+$r = Get-Content data\storage\jobs\<id>\result.json -Raw -Encoding utf8 | ConvertFrom-Json; $r.status; $r.ok; $r.assignments.Count
+```
+
+Mong đợi: job `completed`, `status` là `OPTIMAL` hoặc `FEASIBLE`, `ok` là `True`. Với dữ liệu mẫu `assignments.Count` là 25.
+
+Cấu trúc `result.json`: `status`, `ok`, `objective`, `cost_terms`, `assignments` (`unit_id`, `day`, `period`, `room_id`) và `violations`. Không có lời giải (`INFEASIBLE`, `UNKNOWN`) vẫn là kết quả hợp lệ (job `completed`). Lịch vi phạm ràng buộc cứng thì job `failed`, xem lý do trong log: `docker compose logs api`.
+
+Hiện chưa có endpoint xem trạng thái hay kết quả job, và ràng buộc mềm chưa được nối vào bộ giải.
 
 ## Chạy ở máy, không dùng Docker
 
 - `LocalStorage` (`infrastructure/storage/local.py`): lưu file vào một thư mục. Key như `jobs/1/input.json` thành đường dẫn con. Key trỏ ra ngoài thư mục gốc (ví dụ `../x`) bị từ chối.
 - `LocalJobDispatcher` (`infrastructure/dispatch/local.py`): chạy worker như một tiến trình riêng, truyền `job_id` qua biến môi trường `JOB_ID`.
-- Worker đọc `DATABASE_URL` (Postgres) và `STORAGE_DIR` (mặc định `data/storage`).
+- API và worker cùng đọc `DATABASE_URL` (Postgres) và `STORAGE_DIR` (mặc định `data/storage`). Hai tiến trình phải trỏ cùng một thư mục, nếu không worker không thấy file input.
 
 ## Quy trình làm việc
 
