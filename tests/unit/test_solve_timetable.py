@@ -7,7 +7,7 @@ from timetable.application.dto.solve import SolveResult, SolveStatus
 from timetable.application.use_cases.solve_timetable import SolveTimetable
 from timetable.domain.entities import Assignment, Problem, Timetable
 from timetable.domain.services.timetable_checker import check_timetable
-from timetable.domain.validator import Violation
+from timetable.domain.violation import Violation
 from timetable.infrastructure.problem_loader import (
     problem_from_dict,
     solve_options_from_dict,

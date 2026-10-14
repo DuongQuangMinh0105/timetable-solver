@@ -28,9 +28,9 @@ def test_default_encoder_names() -> None:
 
 def test_variables_only_for_allowed_rooms_and_periods(sample_problem: Problem) -> None:
     ctx = build_model(sample_problem)
-    assert ctx.x
+    assert ctx.s
     rooms_of_unit: dict[str, set[str]] = {}
-    for unit_id, day, period, room_id in ctx.x:
+    for unit_id, day, period, room_id in ctx.s:
         assert 0 <= day <= 5
         assert 0 <= period <= 5  # tiết 7, 8 không có biến
         rooms_of_unit.setdefault(unit_id, set()).add(room_id)

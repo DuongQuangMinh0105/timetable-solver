@@ -14,3 +14,5 @@ dist/
 .terraform/
 *.tfstate*
 .ipynb_checkpoints/
+
+data/

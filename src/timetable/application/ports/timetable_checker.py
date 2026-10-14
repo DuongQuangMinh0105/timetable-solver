@@ -1,7 +1,7 @@
 from typing import Protocol
 
 from timetable.domain.entities import Problem, Timetable
-from timetable.domain.validator import Violation
+from timetable.domain.violation import Violation
 
 
 class TimetableChecker(Protocol):

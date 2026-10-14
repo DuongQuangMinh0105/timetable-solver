@@ -2,10 +2,11 @@ from collections import defaultdict
 
 from timetable.domain.entities import Problem, Timetable
 from timetable.domain.services.slot_policy import allowed_starts
-from timetable.domain.validator import Violation
+from timetable.domain.violation import Violation
 
 
-def _longest_run(periods: list[int]) -> int:
+def longest_run(periods: list[int]) -> int:
+    """Độ dài chuỗi tiết liền nhau dài nhất trong danh sách chỉ số tiết."""
     best = run = 0
     previous: int | None = None
     for p in sorted(periods):
@@ -75,7 +76,7 @@ def check_timetable(problem: Problem, timetable: Timetable) -> list[Violation]:
         bad("UNIT_UNASSIGNED", f"Đơn vị {unit_id} chưa được xếp.")
 
     for (class_id, day), periods in sorted(class_periods.items()):
-        if _longest_run(periods) > problem.max_consecutive_periods:
+        if longest_run(periods) > problem.max_consecutive_periods:
             bad(
                 "MAX_CONSECUTIVE",
                 f"Lớp {class_id} học quá {problem.max_consecutive_periods} tiết liên tiếp "

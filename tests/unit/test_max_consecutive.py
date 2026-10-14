@@ -3,7 +3,6 @@ import pytest
 from solver_helpers import (
     OPTIONS,
     check_valid,
-    longest_run,
     make_problem,
     one_day_grid,
     solve,
@@ -11,6 +10,7 @@ from solver_helpers import (
 )
 from timetable.application.dto.solve import SolveStatus
 from timetable.domain.entities import LessonUnit, Problem
+from timetable.domain.services.timetable_checker import longest_run
 from timetable.infrastructure.solver.builder import build_model, default_hard_encoders
 from timetable.infrastructure.solver.cpsat_solver import CpSatSolver
 from timetable.infrastructure.solver.encoder import ModelContext
@@ -109,7 +109,7 @@ class SaturdayPenalty:
     name = "avoid_saturday_example"
 
     def encode(self, ctx: ModelContext) -> None:
-        for (_u, day, _p, _r), var in ctx.x.items():
+        for (_u, day, _p, _r), var in ctx.s.items():
             if ctx.problem.grid.is_saturday(day):
                 ctx.penalties.append((10, var))
 
