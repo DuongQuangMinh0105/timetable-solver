@@ -150,9 +150,8 @@ class Validator:
                             Violation(
                                 rule_id="ROOM_CONFLICT",
                                 description=(
-                        f"Phòng {room} bị trùng lịch ở ngày {day}, "
-                        f"tiết {curr_period}."
-                    ),
+                                    f"Phòng {room} bị trùng lịch ở ngày {day}, tiết {curr_period}."
+                                ),
                                 severity="HARD",
                             )
                         )
@@ -166,9 +165,8 @@ class Validator:
                             Violation(
                                 rule_id="TEACHER_CONFLICT",
                                 description=(
-                        f"Phòng {room} bị trùng lịch ở ngày {day}, "
-                        f"tiết {curr_period}."
-                    ),
+                                    f"Phòng {room} bị trùng lịch ở ngày {day}, tiết {curr_period}."
+                                ),
                                 severity="HARD",
                             )
                         )
@@ -182,9 +180,8 @@ class Validator:
                             Violation(
                                 rule_id="CLASS_CONFLICT",
                                 description=(
-                        f"Phòng {room} bị trùng lịch ở ngày {day}, "
-                        f"tiết {curr_period}."
-                    ),
+                                    f"Phòng {room} bị trùng lịch ở ngày {day}, tiết {curr_period}."
+                                ),
                                 severity="HARD",
                             )
                         )
