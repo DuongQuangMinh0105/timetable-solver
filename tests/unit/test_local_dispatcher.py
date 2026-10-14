@@ -22,6 +22,14 @@ def test_dispatch_failure_raises() -> None:
         dispatcher.dispatch("job-1")
 
 
+def test_default_command_runs_worker_and_exits() -> None:
+    dispatcher = LocalJobDispatcher(
+        [sys.executable, "-c", "import os; assert os.environ['JOB_ID'] == 'job-abc'"],
+        wait=True,
+    )
+    dispatcher.dispatch("job-abc")
+
+
 def test_default_command_fails_on_invalid_job_id() -> None:
     with pytest.raises(subprocess.CalledProcessError):
         LocalJobDispatcher(wait=True).dispatch("job-abc")

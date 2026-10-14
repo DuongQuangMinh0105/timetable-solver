@@ -1,0 +1,7 @@
+from timetable.application.use_cases.submit_solve_job import SubmitSolveJob
+from timetable.container import create_submit_solve_job
+
+
+def get_submit_solve_job() -> SubmitSolveJob:
+    """Provide the use case for the solve endpoint."""
+    return create_submit_solve_job()
