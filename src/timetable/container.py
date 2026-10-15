@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 
+from timetable.application.use_cases.get_job import GetJob
 from timetable.application.use_cases.submit_solve_job import SubmitSolveJob
 
 
@@ -20,3 +21,10 @@ def create_submit_solve_job() -> SubmitSolveJob:
         storage=LocalStorage(storage_root),
         dispatcher=LocalJobDispatcher(),
     )
+
+
+def create_get_job() -> GetJob:
+    """Build the dependencies required to read a job."""
+    from timetable.infrastructure.persistence.job_repository import JobRepository
+
+    return GetJob(repository=JobRepository())
