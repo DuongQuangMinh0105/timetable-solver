@@ -1,11 +1,12 @@
+from solver_helpers import make_problem, unit
+from timetable.domain.entities import Timetable
 from timetable.domain.validator import Validator
 from timetable.infrastructure.generator import generate_v0
 
 
 def test_validator_empty_timetable() -> None:
-    validator = Validator()
-    # Bỏ truyền tham số rules=[] đi vì validate() hiện tại chỉ nhận timetable
-    violations = validator.validate(timetable=[])
+    problem = make_problem([unit("a", "C1", "T1")])
+    violations = Validator().validate(problem, Timetable())
     assert len(violations) == 1
     assert violations[0].rule_id == "TIMETABLE_EMPTY"
 
