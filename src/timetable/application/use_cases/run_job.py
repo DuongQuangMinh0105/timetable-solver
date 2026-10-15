@@ -36,12 +36,14 @@ class RunJob:
 
         job.status = JobStatus.RUNNING
         self._repository.update(job)
+
         try:
             output = self._handler(self._storage.get(job.input_ref))
             result_ref = f"jobs/{job.id}/result.json"
             self._storage.put(result_ref, output)
-        except Exception:
+        except Exception as exc:
             job.status = JobStatus.FAILED
+            job.error_message = str(exc) or type(exc).__name__
             self._repository.update(job)
             raise
 

@@ -16,3 +16,4 @@ class Job:
     status: JobStatus
     input_ref: str
     result_ref: str | None = None
+    error_message: str | None = None

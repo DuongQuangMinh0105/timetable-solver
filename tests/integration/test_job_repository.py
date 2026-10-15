@@ -51,9 +51,9 @@ def test_update_existing_job(cleanup_job: UUID) -> None:
 
     updated = Job(
         id=cleanup_job,
-        status=JobStatus.COMPLETED,
+        status=JobStatus.FAILED,
         input_ref="test-input.json",
-        result_ref="test-result.json",
+        error_message="Solver failed",
     )
     repository.update(updated)
 

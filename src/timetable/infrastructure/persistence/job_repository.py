@@ -46,6 +46,7 @@ class JobRepository(JobRepositoryPort):
             model.status = job.status.value
             model.input_ref = job.input_ref
             model.result_ref = job.result_ref
+            model.error_message = job.error_message
             session.commit()
 
     @staticmethod
@@ -56,6 +57,7 @@ class JobRepository(JobRepositoryPort):
             status=job.status.value,
             input_ref=job.input_ref,
             result_ref=job.result_ref,
+            error_message=job.error_message,
         )
 
     @staticmethod
@@ -66,4 +68,5 @@ class JobRepository(JobRepositoryPort):
             status=JobStatus(model.status),
             input_ref=model.input_ref,
             result_ref=model.result_ref,
+            error_message=model.error_message,
         )
