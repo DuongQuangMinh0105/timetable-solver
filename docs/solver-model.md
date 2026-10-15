@@ -64,3 +64,36 @@ Mỗi ràng buộc là một `ConstraintEncoder` có `name` và `encode(ctx: Mod
 ## Quy ước chỉ số
 - Mã nguồn đánh số tiết và ngày từ 0. Tài liệu của P2 đánh số tiết từ 1 (tiết 1 là chỉ số 0).
 - `sat_days` truyền vào `SoftObjectiveApplier` tính từ 0 (Thứ Bảy là 5).
+
+## Sức chứa theo block của một lớp
+Quy tắc tối đa 2 tiết liên tiếp và `block_starts = [0, 2, 4]` khiến mỗi lớp chỉ học tối đa
+**4 tiết mỗi ngày**, tức 24 tiết mỗi tuần khi học đủ 6 ngày. Các cách xếp một ngày (số block 2 tiết,
+số block 1 tiết) của một lớp:
+
+| Block 2 tiết | Block 1 tiết | Ví dụ (tiết 1 đến 6) |
+|---|---|---|
+| 2 | 0 | 1-2 và 5-6 |
+| 1 | 2 | block 1-2, rồi tiết 4 và tiết 5 (mỗi tiết là một block 1 tiết) |
+| 0 | 4 | tiết 1, 2, 4, 5 (mỗi tiết một block 1 tiết, không quá 2 tiết liền) |
+
+Ví dụ (1,2) rồi (3,4) là 4 tiết liền, và thêm tiết 3 ngay sau block 1-2 là 3 tiết liền, đều bị cấm.
+
+Hệ quả cho dữ liệu: một lớp có tối đa **8 môn 3 tiết** (8 block 2 tiết và 8 block 1 tiết đủ 24 tiết),
+và tổng số tiết mỗi tuần của một lớp không được vượt 24. Khi gần mức này bài toán rất chặt và solver
+giải chậm (xem benchmark trong PR ngày 8).
+
+`domain/services/block_capacity.py` kiểm tra điều này không cần solver: `class_capacity_issues(problem)`
+báo các lớp không thể xếp vừa. Đây là điều kiện **cần** (xét riêng từng lớp); với một lớp mà giáo viên
+và phòng không tranh chấp, nó cũng là điều kiện **đủ** (đối chiếu với solver trong
+`tests/unit/test_block_capacity.py`).
+
+## Tách môn thành ca học và kiểm tra nhất quán
+- `unit_splitter` tách `periods_per_week` thành block (xem bảng ở trên). Môn 3 tiết = block 2 + block 1;
+  hai block có thể cùng một ngày nếu không tạo ra 3 tiết liền.
+- `domain/services/unit_consistency.py::check_units_match_courses` kiểm tra mỗi môn: tổng `duration`
+  của các ca bằng `periods_per_week`, lớp và giáo viên của ca trùng với môn, id ca không trùng,
+  `duration` chỉ là 1 hoặc 2.
+- `problem_from_dict` gọi kiểm tra này và ném `InvalidProblemError` khi dữ liệu không nhất quán.
+- File mẫu cũ `docs/schema/input.sample.json` dùng các ca 1 tiết (vẫn hợp lệ). File
+  `docs/schema/input.blocks.sample.json` để trống `lesson_units` nên loader tự tách thành block,
+  kèm `constraints.block_starts = [0, 2, 4]`.
