@@ -50,11 +50,13 @@ def test_run_job_marks_failed_and_reraises(tmp_path: Path) -> None:
     def boom(_: bytes) -> bytes:
         raise RuntimeError("boom")
 
-    with pytest.raises(RuntimeError):
+    with pytest.raises(RuntimeError, match="boom"):
         RunJob(repo, storage, boom).execute(job.id)
 
-    assert repo.jobs[job.id].status == JobStatus.FAILED
-    assert repo.jobs[job.id].result_ref is None
+    failed_job = repo.jobs[job.id]
+    assert failed_job.status == JobStatus.FAILED
+    assert failed_job.error_message == "boom"
+    assert failed_job.result_ref is None
 
 
 def test_run_job_not_found(tmp_path: Path) -> None:
