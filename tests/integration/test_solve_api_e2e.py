@@ -59,7 +59,8 @@ def test_post_solve_runs_worker_and_completes_job(
         assert job.status == JobStatus.COMPLETED
         assert job.result_ref is not None
         result = json.loads((tmp_path / job.result_ref).read_text(encoding="utf-8"))
-        assert result["ok"] is True
+        assert result["status"] in {"OPTIMAL", "FEASIBLE"}
+        assert result["violations"] == []
         assert len(result["assignments"]) == len(payload["lesson_units"])
     finally:
         app.dependency_overrides.pop(get_submit_solve_job, None)

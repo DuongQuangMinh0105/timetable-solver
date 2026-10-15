@@ -59,7 +59,7 @@ Dừng bằng `make down` (hoặc `docker compose down`), xem log bằng `make l
 
 ## Chạy thử một job (end-to-end)
 
-Với compose đang chạy, có hai cách. Cả hai đều chạy bộ giải CP-SAT thật.
+Với compose đang chạy, có hai cách. Cả hai đều chạy bộ giải CP-SAT thật, có ràng buộc mềm (tránh thứ Bảy, một phòng cho mỗi môn, để dành G316 cho MBA).
 
 **Cách 1: gửi bài toán qua API.** API lưu input, tạo job và tự chạy worker (tiến trình con trong container `api`):
 
@@ -86,14 +86,32 @@ docker compose run --rm -e JOB_ID=$id worker
 Kiểm tra kết quả (thay `<id>` bằng `job_id` ở cách 1, hoặc dùng `$id` ở cách 2):
 
 ```powershell
-$r = Get-Content data\storage\jobs\<id>\result.json -Raw -Encoding utf8 | ConvertFrom-Json; $r.status; $r.ok; $r.assignments.Count
+$r = Get-Content data\storage\jobs\<id>\result.json -Raw -Encoding utf8 | ConvertFrom-Json; $r.status; $r.objective; $r.assignments.Count
 ```
 
-Mong đợi: job `completed`, `status` là `OPTIMAL` hoặc `FEASIBLE`, `ok` là `True`. Với dữ liệu mẫu `assignments.Count` là 25.
+Mong đợi: job `completed`, `status` là `OPTIMAL` hoặc `FEASIBLE`, `objective` là tổng điểm phạt mềm (0 là không bị phạt). Với dữ liệu mẫu `assignments.Count` là 25.
 
-Cấu trúc `result.json`: `status`, `ok`, `objective`, `cost_terms`, `assignments` (`unit_id`, `day`, `period`, `room_id`) và `violations`. Không có lời giải (`INFEASIBLE`, `UNKNOWN`) vẫn là kết quả hợp lệ (job `completed`). Lịch vi phạm ràng buộc cứng thì job `failed`, xem lý do trong log: `docker compose logs api`.
+Cấu trúc `result.json`:
 
-Hiện chưa có endpoint xem trạng thái hay kết quả job, và ràng buộc mềm chưa được nối vào bộ giải.
+```json
+{
+  "status": "OPTIMAL",
+  "objective": 15,
+  "cost_terms": {"room": 5, "sat": 10, "g316": 0},
+  "assignments": [
+    {"unit_id": "M-A1-ENG-0", "course_id": "M-A1-ENG", "class_id": "C-A1",
+     "teacher_id": "T01", "day": 0, "start_period": 0, "duration": 2, "room_id": "G314"}
+  ],
+  "violations": [{"rule_id": "...", "description": "...", "severity": "HARD"}]
+}
+```
+
+- `start_period` là tiết bắt đầu (tính từ 0). Đơn vị học chiếm `duration` tiết liên tiếp từ đó.
+- `status` nhận `OPTIMAL`, `FEASIBLE`, `INFEASIBLE`, `UNKNOWN`, `MODEL_INVALID`. Vô nghiệm hoặc hết thời gian thì `assignments` rỗng.
+- `objective` và `cost_terms` là điểm phạt mềm. Trọng số lấy từ `soft_weights` trong input (`room_stability`, `avoid_saturday`, `reserve_mba_room`).
+- Không có lời giải (`INFEASIBLE`, `UNKNOWN`) vẫn là kết quả hợp lệ, job `completed`. Lịch vi phạm ràng buộc cứng thì job `failed` và không có `result.json`, xem lý do trong log: `docker compose logs api`.
+
+Hiện chưa có endpoint xem trạng thái hay kết quả job.
 
 ## Chạy ở máy, không dùng Docker
 

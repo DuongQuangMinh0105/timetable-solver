@@ -12,7 +12,7 @@ from timetable.domain.services.timetable_checker import check_timetable
 from timetable.infrastructure.persistence.database import SessionFactory
 from timetable.infrastructure.persistence.job_repository import JobRepository
 from timetable.infrastructure.persistence.models import JobModel
-from timetable.infrastructure.solver.cpsat_solver import CpSatSolver
+from timetable.infrastructure.solver.default_solver import build_default_solver
 from timetable.infrastructure.solver.solve_handler import make_solve_handler
 from timetable.infrastructure.storage.local import LocalStorage
 
@@ -23,7 +23,7 @@ def _run(tmp_path: Path, payload: bytes) -> tuple[RunJob, JobRepository, LocalSt
     job = Job(id=uuid4(), status=JobStatus.QUEUED, input_ref="jobs/in/input.json")
     storage.put(job.input_ref, payload)
     repository.save(job)
-    handler = make_solve_handler(CpSatSolver(), check_timetable)
+    handler = make_solve_handler(build_default_solver, check_timetable)
     return RunJob(repository, storage, handler), repository, storage, job
 
 
@@ -46,7 +46,8 @@ def test_solve_job_end_to_end_with_postgres(tmp_path: Path) -> None:
         assert saved.status == JobStatus.COMPLETED
         assert saved.result_ref is not None
         result = json.loads(storage.get(saved.result_ref))
-        assert result["ok"] is True
+        assert result["status"] in {"OPTIMAL", "FEASIBLE"}
+        assert result["violations"] == []
         assert len(result["assignments"]) == len(data["lesson_units"])
     finally:
         _cleanup(job)
