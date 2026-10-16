@@ -231,3 +231,16 @@ def _rooms() -> list[dict[str, Any]]:
         }
     )
     return rooms
+# Bộ tham số "khó": nhiều lớp MBA và lớp vẽ dùng chung G316 và G313 (mỗi phòng 36 tiết/tuần),
+# ít giáo viên so với số lớp. Chỉnh số liệu sau lần chạy đầu nếu quá dễ hoặc vô nghiệm.
+HARD_PARAMS: dict[str, int] = {
+    "num_classes": 20,
+    "num_teachers": 8,
+    "num_mba_classes": 6,
+    "num_art_classes": 6,
+}
+
+
+def generate_hard(seed: int = 0, **overrides: int) -> dict[str, Any]:
+    """Sinh dữ liệu "khó"; ``overrides`` ghi đè từng tham số trong ``HARD_PARAMS``."""
+    return generate_v1(seed=seed, **{**HARD_PARAMS, **overrides})
