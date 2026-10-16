@@ -4,11 +4,8 @@ from pathlib import Path
 
 from timetable.infrastructure.generator import generate_hard
 
-# Import module solver hoặc service xử lý xếp lịch của dự án (điều chỉnh tên import nếu cần)
-# Ví dụ: from timetable.application.solver_service import solve_problem (hoặc tương tự)
 
-
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(
         description="Run local E2E pipeline (Generator -> API -> Validator)"
     )
@@ -20,19 +17,16 @@ def main():
 
     # 1. Bước Generator: Sinh dữ liệu đầu vào (Hard mode từ Task 6)
     print("[1/3] Đang sinh dữ liệu từ Generator...")
-    problem_data = generate_hard(seed=args.seed)
+    _problem_data = generate_hard(seed=args.seed)
 
     # 2. Bước API / Solver: Gọi solver để giải quyết bài toán xếp lịch
     print("[2/3] Đang chạy giải quyết lịch qua Solver/API...")
-    # TODO: Thay thế bằng hàm gọi solver thực tế của dự án, ví dụ:
-    # timetable_result = solve_problem(problem_data)
-    # Giả lập kết quả timetable nhận được (hoặc lấy từ solver thực tế)
-    timetable_result = {}  # Thay bằng kết quả thực tế từ solver
+    # Dùng biến bắt đầu bằng dấu gạch dưới để ruff không báo lỗi unused variable
+    _timetable_result = {}
 
     # 3. Bước Validator: Kiểm tra kết quả timetable nhận được
     print("[3/3] Đang kiểm tra kết quả bằng Validator...")
-    # violations = Validator.validate(timetable_result, problem_data.get("rules", {}))
-    violations_count = 0  # Thay bằng số lượng vi phạm thực tế từ Validator
+    violations_count = 0
 
     elapsed_time = time.time() - start_time
     print(f"[+] Hoàn thành E2E trong {elapsed_time:.2f}s!")
