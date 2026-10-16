@@ -97,3 +97,49 @@ và phòng không tranh chấp, nó cũng là điều kiện **đủ** (đối c
 - File mẫu cũ `docs/schema/input.sample.json` dùng các ca 1 tiết (vẫn hợp lệ). File
   `docs/schema/input.blocks.sample.json` để trống `lesson_units` nên loader tự tách thành block,
   kèm `constraints.block_starts = [0, 2, 4]`.
+
+## Tối ưu mô hình và kết quả đo (ngày 9)
+Biến chỉ được tạo cho (phòng, ô bắt đầu) hợp lệ (`variables.py`, `room_policy.py`, `slot_policy.py`),
+nên mô hình không có biến cho ô bị cấm.
+
+`infrastructure/solver/optimization.py` có ba encoder tối ưu **tùy chọn**, không đổi tập nghiệm hợp
+lệ, truyền qua `build_model(..., optimization_encoders=...)` hoặc `CpSatSolver(optimization_encoders=...)`:
+
+| Encoder | Ý tưởng |
+|---|---|
+| `IdenticalUnitOrderEncoder` | Các ca giống hệt nhau (cùng môn, lớp, giáo viên, độ dài) bắt đầu theo thứ tự cố định, loại nghiệm chỉ khác do hoán đổi ca |
+| `RoomValuePrecedenceEncoder` | Các phòng giống hệt nhau (cùng sức chứa, loại, loại hỗ trợ) dùng theo thứ tự; phòng mà hàm mục tiêu nhắc tên phải đưa vào `excluded_room_ids` |
+| `ClassDayCapacityEncoder` | Giới hạn tường minh số tiết và số block 2 tiết của một lớp trong một ngày (từ `day_patterns`) |
+
+`scripts/bench_model.py` đo thời gian trên bài toán nhân tạo 10 lớp (2 MBA, 2 Design), giới hạn 60 giây,
+2 luồng, `block_starts = [0, 2, 4]`.
+
+**Chỉ tìm lịch hợp lệ (không có hàm mục tiêu), lớp thường 21 và 24 tiết/tuần:**
+
+| Cấu hình | 21 tiết | 24 tiết |
+|---|---|---|
+| Gốc (không tối ưu thêm) | 4,7 s | 5,9 s |
+| + thứ tự ca giống nhau | 5,5 s | 7,1 s |
+| + thứ tự phòng giống nhau | 15,9 s | 17,5 s |
+| + giới hạn tiết một ngày | 8,0 s | 9,6 s |
+| + cả ba | 18,6 s | 21,6 s |
+
+**Có hàm mục tiêu mềm của P2 (như worker thật), 60 giây:** mọi cấu hình đều dừng ở `FEASIBLE`, không
+chứng minh được tối ưu. Điểm phạt tìm được giống nhau (80 với 21 tiết, 140 với 24 tiết; ở 24 tiết
+một lần chạy cấu hình gốc ra 150, chênh lệch do ngẫu nhiên). Hai encoder `ca giống nhau` và `giới hạn
+tiết một ngày` nâng cận dưới từ 0 lên 20 nhưng không cải thiện lịch tìm được. Toàn bộ điểm phạt ở
+các lần đo là phạt thứ Bảy (`sat`), vì lớp 21 tiết chỉ có 20 chỗ từ thứ Hai đến thứ Sáu (mỗi ngày
+tối đa 4 tiết) nên buộc phải học thứ Bảy.
+
+Kết luận:
+- Với kích thước này, mô hình gốc đã đủ nhanh khi chỉ cần lịch hợp lệ (dưới 6 giây).
+- Phá đối xứng **không có lợi** ở quy mô đã đo; riêng thứ tự phòng làm chậm gấp khoảng 3 lần. Vì vậy
+  các encoder trên **không bật mặc định**. Giữ lại để thử khi quy mô lớn hơn (50 đến 100 lớp).
+- Hướng cải thiện lịch tốt hơn nằm ở tìm kiếm chứ không ở đối xứng: trọng số, gợi ý nghiệm
+  (`AddHint`), tham số solver. Đây là việc của P2 ở ngày 9.
+
+Kiểm tra tĩnh sức chứa tài nguyên (`domain/services/resource_capacity.py`): `teacher_capacity_issues`
+và `room_capacity_issues` báo ngay khi một giáo viên hoặc một nhóm phòng bị giao nhiều tiết hơn số
+tiết có trong tuần (ví dụ hai lớp MBA cùng bắt buộc dùng G316). Solver không chứng minh được vô
+nghiệm này trong 60 giây, nhưng kiểm tra tĩnh gần như tức thì.
+

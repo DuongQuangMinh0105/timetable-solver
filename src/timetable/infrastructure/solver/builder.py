@@ -35,16 +35,20 @@ def build_model(
     *,
     soft_encoders: Sequence[ConstraintEncoder] = (),
     objective: ObjectiveApplier | None = None,
+    optimization_encoders: Sequence[ConstraintEncoder] = (),
 ) -> ModelContext:
     """Dựng mô hình CP-SAT.
 
     Thứ tự: tạo biến, ràng buộc cứng (`encoders`, mặc định là `default_hard_encoders()`),
-    ràng buộc mềm (`soft_encoders`, ghi `ctx.penalties`), cuối cùng hàm mục tiêu (`objective`).
+    encoder tối ưu (`optimization_encoders`, phá đối xứng, không đổi tập nghiệm hợp lệ), ràng buộc
+    mềm (`soft_encoders`, ghi `ctx.penalties`), cuối cùng hàm mục tiêu (`objective`).
     """
     ctx = ModelContext(problem=problem, model=cp_model.CpModel())
     create_decision_variables(ctx)
     for encoder in default_hard_encoders() if encoders is None else encoders:
         encoder.encode(ctx)
+    for optimization in optimization_encoders:
+        optimization.encode(ctx)
     for soft in soft_encoders:
         soft.encode(ctx)
     if objective is not None:
