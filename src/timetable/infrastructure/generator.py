@@ -231,6 +231,8 @@ def _rooms() -> list[dict[str, Any]]:
         }
     )
     return rooms
+
+
 # Bộ tham số "khó": nhiều lớp MBA và lớp vẽ dùng chung G316 và G313 (mỗi phòng 36 tiết/tuần),
 # ít giáo viên so với số lớp. Chỉnh số liệu sau lần chạy đầu nếu quá dễ hoặc vô nghiệm.
 HARD_PARAMS: dict[str, int] = {

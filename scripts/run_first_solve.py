@@ -1,6 +1,6 @@
-﻿"""Chạy solver trên dữ liệu khó, chạy validator trên kết quả, ghi báo cáo cho P1.
+"""Chạy solver trên dữ liệu khó, chạy validator trên kết quả, ghi báo cáo cho P1.
 
-    python scripts/run_first_solve.py --seed 1 --time-limit 60
+python scripts/run_first_solve.py --seed 1 --time-limit 60
 """
 
 import argparse
