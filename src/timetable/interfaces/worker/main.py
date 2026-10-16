@@ -1,14 +1,13 @@
 import logging
 import os
 import time
-from pathlib import Path
 from uuid import UUID
 
 from timetable.application.use_cases.run_job import RunJob
 from timetable.domain.services.timetable_checker import check_timetable
 from timetable.infrastructure.solver.default_solver import build_default_solver
 from timetable.infrastructure.solver.solve_handler import make_solve_handler
-from timetable.infrastructure.storage.local import LocalStorage
+from timetable.infrastructure.storage.factory import create_storage
 
 logging.basicConfig(
     level=logging.INFO,
@@ -20,14 +19,14 @@ IDLE_SLEEP_SECONDS = 3600
 
 
 def build_use_case() -> RunJob:
-    """Dựng RunJob với Postgres, storage cục bộ và bộ giải CP-SAT thật (có ràng buộc mềm).
+    """Dựng RunJob với Postgres, storage (theo STORAGE_BACKEND) và bộ giải CP-SAT thật.
 
     Import repository ở đây (không để đầu file) vì database.py cần
     DATABASE_URL ngay khi import.
     """
     from timetable.infrastructure.persistence.job_repository import JobRepository
 
-    storage = LocalStorage(Path(os.getenv("STORAGE_DIR", "data/storage")))
+    storage = create_storage()
     handler = make_solve_handler(build_default_solver, check_timetable)
     return RunJob(JobRepository(), storage, handler)
 

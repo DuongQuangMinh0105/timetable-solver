@@ -15,6 +15,7 @@ from timetable.infrastructure.persistence.database import SessionFactory
 from timetable.infrastructure.persistence.job_repository import JobRepository
 from timetable.infrastructure.persistence.models import JobModel
 from timetable.infrastructure.storage.local import LocalStorage
+from timetable.infrastructure.storage.postgres import PostgresStorage
 from timetable.interfaces.api.dependencies import get_submit_solve_job
 from timetable.interfaces.api.main import app
 
@@ -64,6 +65,48 @@ def test_post_solve_runs_worker_and_completes_job(
         assert len(result["assignments"]) == len(payload["lesson_units"])
     finally:
         app.dependency_overrides.pop(get_submit_solve_job, None)
+        if job_id is not None:
+            with SessionFactory() as session:
+                session.execute(delete(JobModel).where(JobModel.id == job_id))
+                session.commit()
+
+
+def test_post_solve_with_postgres_storage_backend(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Cấu hình như trên Render: không có ổ đĩa bền, file input và kết quả nằm trong Postgres."""
+    monkeypatch.setenv("STORAGE_BACKEND", "postgres")  # tiến trình worker thừa hưởng biến này
+    monkeypatch.setenv("SOLVER_MAX_WORKERS", "1")
+    storage = PostgresStorage()
+
+    def build_use_case() -> SubmitSolveJob:
+        return SubmitSolveJob(
+            repository=JobRepository(),
+            storage=storage,
+            dispatcher=LocalJobDispatcher(wait=True),
+        )
+
+    payload = json.loads(SAMPLE_PATH.read_text(encoding="utf-8"))
+    payload["solver"] = {"time_limit_s": 30, "num_workers": 8, "random_seed": 0}
+    app.dependency_overrides[get_submit_solve_job] = build_use_case
+    job_id: UUID | None = None
+    keys: list[str] = []
+
+    try:
+        response = TestClient(app).post("/solve", json=payload)
+        assert response.status_code == 202
+        job_id = UUID(response.json()["job_id"])
+
+        job = JobRepository().get_by_id(job_id)
+        assert job is not None
+        assert job.status == JobStatus.COMPLETED
+        assert job.result_ref is not None
+        keys = [job.input_ref, job.result_ref]
+        result = json.loads(storage.get(job.result_ref))
+        assert result["status"] in {"OPTIMAL", "FEASIBLE"}
+        assert len(result["assignments"]) == len(payload["lesson_units"])
+    finally:
+        app.dependency_overrides.pop(get_submit_solve_job, None)
+        for key in keys:
+            storage.delete(key)
         if job_id is not None:
             with SessionFactory() as session:
                 session.execute(delete(JobModel).where(JobModel.id == job_id))

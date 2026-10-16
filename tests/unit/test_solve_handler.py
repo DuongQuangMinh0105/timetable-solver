@@ -138,3 +138,44 @@ def test_soft_weights_accept_whole_floats_and_reject_fractions() -> None:
     assert soft_weights_from_dict({"soft_weights": {"avoid_saturday": 10.0}})[1] == 10
     with pytest.raises(ValueError, match="avoid_saturday"):
         soft_weights_from_dict({"soft_weights": {"avoid_saturday": 2.5}})
+
+
+class _RecordingSolver:
+    """Bộ giải giả ghi lại tùy chọn nhận được."""
+
+    def __init__(self) -> None:
+        self.options: SolveOptions | None = None
+
+    def solve(self, problem: Problem, options: SolveOptions) -> SolveResult:
+        self.options = options
+        return SolveResult(status=SolveStatus.UNKNOWN)
+
+
+def _workers_used(monkeypatch: pytest.MonkeyPatch, cap: str | None, requested: int) -> int:
+    if cap is None:
+        monkeypatch.delenv("SOLVER_MAX_WORKERS", raising=False)
+    else:
+        monkeypatch.setenv("SOLVER_MAX_WORKERS", cap)
+    data = _sample()
+    data["solver"] = {"time_limit_s": 5, "num_workers": requested, "random_seed": 0}
+    solver = _RecordingSolver()
+    make_solve_handler(lambda _p, _d: solver, check_timetable)(_bytes(data))
+    assert solver.options is not None
+    return solver.options.num_workers
+
+
+def test_max_workers_env_caps_requested_workers(monkeypatch: pytest.MonkeyPatch) -> None:
+    assert _workers_used(monkeypatch, cap="1", requested=8) == 1
+
+
+def test_max_workers_env_does_not_raise_requested_workers(monkeypatch: pytest.MonkeyPatch) -> None:
+    assert _workers_used(monkeypatch, cap="4", requested=2) == 2
+
+
+def test_workers_unchanged_without_max_workers_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    assert _workers_used(monkeypatch, cap=None, requested=8) == 8
+
+
+def test_max_workers_env_rejects_invalid_value(monkeypatch: pytest.MonkeyPatch) -> None:
+    with pytest.raises(ValueError, match="SOLVER_MAX_WORKERS"):
+        _workers_used(monkeypatch, cap="0", requested=8)

@@ -1,7 +1,10 @@
 import json
+import os
 from collections.abc import Callable
+from dataclasses import replace
 from typing import Any
 
+from timetable.application.dto.solve import SolveOptions
 from timetable.application.ports.solver import SolverPort
 from timetable.application.ports.timetable_checker import TimetableChecker
 from timetable.application.use_cases.run_job import JobHandler
@@ -11,6 +14,20 @@ from timetable.infrastructure.problem_loader import problem_from_dict, solve_opt
 
 # Dựng bộ giải cho từng bài toán (cần Problem để biết môn MBA và dữ liệu đầu vào để lấy trọng số).
 SolverFactory = Callable[[Problem, dict[str, Any]], SolverPort]
+
+
+def _cap_workers(options: SolveOptions) -> SolveOptions:
+    """Giới hạn số luồng của bộ giải theo biến SOLVER_MAX_WORKERS (nếu có).
+
+    Nơi chạy ít CPU (ví dụ Render miễn phí chỉ có 0,1 CPU) chạy nhiều luồng chỉ tốn thêm CPU và RAM.
+    """
+    raw = os.getenv("SOLVER_MAX_WORKERS")
+    if not raw:
+        return options
+    cap = int(raw)
+    if cap < 1:
+        raise ValueError(f"SOLVER_MAX_WORKERS phải >= 1, nhận được {raw!r}")
+    return replace(options, num_workers=min(options.num_workers, cap))
 
 
 class InvalidTimetableError(Exception):
@@ -66,7 +83,7 @@ def make_solve_handler(solver_factory: SolverFactory, checker: TimetableChecker)
     def handler(data: bytes) -> bytes:
         payload = json.loads(data)
         problem = problem_from_dict(payload)
-        options = solve_options_from_dict(payload)
+        options = _cap_workers(solve_options_from_dict(payload))
         solver = solver_factory(problem, payload)
         outcome = SolveTimetable(solver, checker).execute(problem, options)
         if outcome.violations:

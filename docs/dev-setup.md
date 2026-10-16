@@ -117,7 +117,9 @@ Hiện chưa có endpoint xem trạng thái hay kết quả job.
 
 - `LocalStorage` (`infrastructure/storage/local.py`): lưu file vào một thư mục. Key như `jobs/1/input.json` thành đường dẫn con. Key trỏ ra ngoài thư mục gốc (ví dụ `../x`) bị từ chối.
 - `LocalJobDispatcher` (`infrastructure/dispatch/local.py`): chạy worker như một tiến trình riêng, truyền `job_id` qua biến môi trường `JOB_ID`.
-- API và worker cùng đọc `DATABASE_URL` (Postgres) và `STORAGE_DIR` (mặc định `data/storage`). Hai tiến trình phải trỏ cùng một thư mục, nếu không worker không thấy file input.
+- API và worker cùng đọc `DATABASE_URL` (Postgres) và `STORAGE_BACKEND`: `local` (mặc định, thư mục `STORAGE_DIR`, mặc định `data/storage`) hoặc `postgres` (lưu file trong bảng `blobs`). Hai tiến trình phải dùng cùng một cấu hình, nếu không worker không thấy file input.
+- `PostgresStorage` (`infrastructure/storage/postgres.py`): dùng khi nơi chạy không có ổ đĩa bền, xem `docs/deploy-render.md`.
+- `SOLVER_MAX_WORKERS` (tùy chọn): giới hạn số luồng của bộ giải khi nơi chạy ít CPU.
 
 ## Quy trình làm việc
 
