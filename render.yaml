@@ -1,0 +1,18 @@
+# Blueprint cho Render (gói miễn phí): API FastAPI chạy trong Docker.
+# Worker chạy như tiến trình con của API (LocalJobDispatcher), file input và kết quả nằm trong Postgres
+# (Neon) vì Render miễn phí không có ổ đĩa bền.
+services:
+  - type: web
+    name: timetable-solver
+    runtime: docker
+    plan: free
+    healthCheckPath: /health
+    # Chạy migration rồi mới bật API. Render tự đặt biến PORT.
+    dockerCommand: 'sh -c "uv run --no-sync alembic upgrade head && uv run --no-sync uvicorn timetable.interfaces.api.main:app --host 0.0.0.0 --port $PORT"'
+    envVars:
+      - key: DATABASE_URL
+        sync: false # nhập chuỗi kết nối Neon trong Dashboard, KHÔNG ghi vào repo
+      - key: STORAGE_BACKEND
+        value: postgres
+      - key: SOLVER_MAX_WORKERS
+        value: "1" # Render miễn phí chỉ có 0,1 CPU
