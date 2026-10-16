@@ -26,12 +26,19 @@ class CpSatSolver:
         self,
         soft_encoders: Sequence[ConstraintEncoder] = (),
         objective: ObjectiveApplier | None = None,
+        optimization_encoders: Sequence[ConstraintEncoder] = (),
     ) -> None:
         self._soft_encoders = tuple(soft_encoders)
+        self._optimization_encoders = tuple(optimization_encoders)
         self._objective = objective
 
     def solve(self, problem: Problem, options: SolveOptions) -> SolveResult:
-        ctx = build_model(problem, soft_encoders=self._soft_encoders, objective=self._objective)
+        ctx = build_model(
+            problem,
+            soft_encoders=self._soft_encoders,
+            objective=self._objective,
+            optimization_encoders=self._optimization_encoders,
+        )
         solver = cp_model.CpSolver()
         solver.parameters.max_time_in_seconds = options.time_limit_s
         solver.parameters.num_workers = options.num_workers

@@ -61,6 +61,30 @@ trạng thái job trong Postgres. Handler hiện tại là solver giả (`infras
 nối `SolveTimetable` vào worker là một thay đổi riêng, cần thống nhất định dạng `result.json`,
 cách đánh dấu job vô nghiệm và cấu hình CPU của container worker.
 
+## Quy tắc phụ thuộc giữa các tầng
+| Tầng | Được import |
+|---|---|
+| `domain` | chỉ `domain` |
+| `application` | `domain`, `application` |
+| `infrastructure` | `domain`, `application`, `infrastructure` |
+| `interfaces` | mọi tầng (nơi lắp ráp: worker và API tạo các adapter) |
+
+Về thư viện ngoài:
+- `domain` không dùng thư viện framework (`ortools`, `sqlalchemy`, `fastapi`, `pydantic`, `psycopg`,
+  `alembic`, `openpyxl`, `dotenv`, `streamlit`, `uvicorn`, `starlette`).
+- `application` không dùng framework, **trừ `pydantic`** (được phép để mô tả DTO).
+- `infrastructure` và `interfaces` dùng thư viện tự do.
+
+`tests/unit/test_architecture.py` kiểm tra các quy tắc này bằng cách phân tích cú pháp mọi file
+trong `src/timetable` (tính cả import nằm trong hàm hoặc sau `TYPE_CHECKING`, và import tương đối). Chạy
+trong CI cùng `pytest`; vi phạm làm test đỏ và in ra file, dòng và import vi phạm. Không dùng
+`import-linter` để khỏi thêm thư viện dev và bước CI.
+
+Ngoại lệ đã ghi nhận:
+- `JobRepositoryPort` nằm ở `domain/ports/job_repository.py`, trong khi các port khác nằm ở
+  `application/ports/`. Giữ nguyên vì hợp lệ về phụ thuộc (domain không import tầng ngoài). Khi thêm
+  port mới, ưu tiên đặt ở `application/ports/`.
+
 ## Quy ước
 - Thư mục `tests/` không có `__init__.py`: mỗi module test và helper phải có tên duy nhất
   (ví dụ `solver_helpers.py`), nếu không pytest báo trùng tên module.
