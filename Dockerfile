@@ -12,4 +12,4 @@ COPY alembic.ini ./
 COPY alembic ./alembic
 RUN uv sync --frozen --no-dev
 
-CMD ["uv", "run", "--no-sync", "python", "-c", "from timetable import main; main()"]
+CMD ["sh", "-c", "uv run --no-sync alembic upgrade head && exec uv run --no-sync uvicorn timetable.interfaces.api.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
