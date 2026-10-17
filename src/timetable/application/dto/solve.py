@@ -18,6 +18,7 @@ class SolveOptions:
     num_workers: int = 8
     random_seed: int = 0
 
+
 @dataclass(frozen=True, slots=True)
 class SolveResult:
     status: SolveStatus

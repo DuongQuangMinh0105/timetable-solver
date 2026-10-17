@@ -53,7 +53,7 @@ def create_solver_handler(
             "cost_terms": result.cost_terms,
             "timetable": timetable_data,
         }
-        
+
         return json.dumps(
             output,
             ensure_ascii=False,

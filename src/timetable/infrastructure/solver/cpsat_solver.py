@@ -70,10 +70,6 @@ class CpSatSolver:
             timetable=Timetable(tuple(assignments)),
             objective=objective,
             optimal=(status == SolveStatus.OPTIMAL),
-            objective_bound=(
-                solver.best_objective_bound
-                if ctx.model.has_objective()
-                else None
-            ),
+            objective_bound=(solver.best_objective_bound if ctx.model.has_objective() else None),
             cost_terms=cost_terms,
         )

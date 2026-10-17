@@ -87,9 +87,7 @@ def _run_redis_worker_e2e(
 
         while time.monotonic() < deadline:
             if worker.poll() is not None:
-                pytest.fail(
-                    f"Redis worker exited unexpectedly: {worker.returncode}"
-                )
+                pytest.fail(f"Redis worker exited unexpectedly: {worker.returncode}")
 
             job = JobRepository().get_by_id(job_id)
 
@@ -103,8 +101,7 @@ def _run_redis_worker_e2e(
 
         assert job is not None, f"Job {job_id} was not found"
         assert job.status == JobStatus.COMPLETED, (
-            f"Job ended with status {job.status}; "
-            f"error: {job.error_message}"
+            f"Job ended with status {job.status}; error: {job.error_message}"
         )
         assert job.result_ref is not None
 

@@ -30,7 +30,6 @@ def test_default_command_runs_worker_and_exits() -> None:
     dispatcher.dispatch("job-abc")
 
 
-
 def test_default_command_fails_on_invalid_job_id(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
