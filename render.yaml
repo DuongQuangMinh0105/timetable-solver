@@ -6,6 +6,7 @@ services:
     name: timetable-solver
     runtime: docker
     plan: free
+    autoDeployTrigger: checksPass # chỉ deploy khi CI trên GitHub xanh
     healthCheckPath: /health
         # Lệnh khởi động (chạy migration rồi bật API) nằm ở CMD của Dockerfile. Render tự đặt biến PORT.
     envVars:
