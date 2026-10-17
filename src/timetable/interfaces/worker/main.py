@@ -1,10 +1,13 @@
+
 import logging
 import os
-import time
 from uuid import UUID
+
+from redis import Redis
 
 from timetable.application.use_cases.run_job import RunJob
 from timetable.domain.services.timetable_checker import check_timetable
+from timetable.infrastructure.persistence.job_repository import JobRepository
 from timetable.infrastructure.solver.default_solver import build_default_solver
 from timetable.infrastructure.solver.solve_handler import make_solve_handler
 from timetable.infrastructure.storage.factory import create_storage
@@ -15,47 +18,57 @@ logging.basicConfig(
 )
 logger = logging.getLogger("timetable.worker")
 
-IDLE_SLEEP_SECONDS = 3600
+QUEUE_NAME = os.getenv("QUEUE_NAME", "timetable:jobs")
+QUEUE_WAIT_SECONDS = 5
 
 
 def build_use_case() -> RunJob:
-    """Dựng RunJob với Postgres, storage (theo STORAGE_BACKEND) và bộ giải CP-SAT thật.
-
-    Import repository ở đây (không để đầu file) vì database.py cần
-    DATABASE_URL ngay khi import.
-    """
-    from timetable.infrastructure.persistence.job_repository import JobRepository
-
+    """Build RunJob with repository, configured storage and real solver."""
     storage = create_storage()
     handler = make_solve_handler(build_default_solver, check_timetable)
-    return RunJob(JobRepository(), storage, handler)
 
-
-def wait_forever() -> None:
-    """Giữ container sống khi chạy compose mà chưa có job cụ thể."""
-    while True:
-        time.sleep(IDLE_SLEEP_SECONDS)
+    return RunJob(
+        repository=JobRepository(),
+        storage=storage,
+        handler=handler,
+    )
 
 
 def main() -> None:
-    """Có JOB_ID: chạy job rồi thoát (lỗi thì thoát với mã khác 0).
+    redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+    redis_client = Redis.from_url(
+        redis_url,
+        decode_responses=True,
+        socket_timeout=QUEUE_WAIT_SECONDS + 5,
+        socket_connect_timeout=5,
+    )
+    use_case = build_use_case()
 
-    Không có JOB_ID: chờ (compose).
-    """
-    raw_job_id = os.getenv("JOB_ID")
-    logger.info("Worker started. JOB_ID=%s", raw_job_id or "<none>")
-
-    if not raw_job_id:
-        wait_forever()
-        return
+    logger.info("Worker started. Waiting for jobs on queue %s", QUEUE_NAME)
 
     try:
-        job = build_use_case().execute(UUID(raw_job_id))
-    except Exception:
-        logger.exception("Job %s failed.", raw_job_id)
-        raise SystemExit(1) from None
+        while True:
+            item = redis_client.brpop(QUEUE_NAME, timeout=QUEUE_WAIT_SECONDS)
 
-    logger.info("Job %s finished with status %s", job.id, job.status.value)
+            if item is None:
+                continue
+
+            _, raw_job_id = item
+
+            try:
+                if isinstance(raw_job_id, bytes):
+                    raw_job_id = raw_job_id.decode("utf-8")
+                job_id = UUID(raw_job_id)
+                job = use_case.execute(job_id)
+                logger.info(
+                    "Job %s finished with status %s",
+                    job.id,
+                    job.status.value,
+                )
+            except Exception:
+                logger.exception("Failed to process job %s", raw_job_id)
+    finally:
+        redis_client.close()
 
 
 if __name__ == "__main__":

@@ -24,10 +24,12 @@ class RunJob:
         repository: JobRepositoryPort,
         storage: StoragePort,
         handler: JobHandler,
+        timeout_seconds: int = 300,
     ) -> None:
         self._repository = repository
         self._storage = storage
         self._handler = handler
+        self._timeout_seconds = timeout_seconds
 
     def execute(self, job_id: UUID) -> Job:
         job = self._repository.get_by_id(job_id)
@@ -47,6 +49,7 @@ class RunJob:
             self._repository.update(job)
             raise
 
+        # Khi chạy thành công:
         job.result_ref = result_ref
         job.status = JobStatus.COMPLETED
         self._repository.update(job)

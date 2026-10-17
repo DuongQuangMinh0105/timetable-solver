@@ -26,14 +26,24 @@ def problem_from_dict(data: dict[str, Any]) -> Problem:
     Nếu không có `lesson_units` (hoặc rỗng), các ca học được tách từ `courses` theo quy tắc block
     (3 tiết -> 2+1). `constraints.block_starts` (tùy chọn) giới hạn tiết bắt đầu của block 2 tiết.
     """
-    grid = data["grid"]
+    grid_data = data["grid"]
+    periods = grid_data["periods"]
+    grid = TimeGrid(
+        days=grid_data["days"],
+        periods=periods,
+        allowed_periods=tuple(grid_data["allowed_periods"]),
+        period_times=() if periods != 8 else TimeGrid().period_times,
+    )
+
     courses = tuple(Course(**c) for c in data["courses"])
     if data.get("lesson_units"):
         units = tuple(LessonUnit(**u) for u in data["lesson_units"])
     else:
         units = tuple(u for course in courses for u in lesson_units_for_course(course))
+
     constraints = data.get("constraints", {})
     block_starts = constraints.get("block_starts")
+
     problem = Problem(
         rooms=tuple(
             Room(
@@ -49,17 +59,15 @@ def problem_from_dict(data: dict[str, Any]) -> Problem:
         class_groups=tuple(ClassGroup(**c) for c in data["class_groups"]),
         courses=courses,
         lesson_units=units,
-        grid=TimeGrid(
-            days=grid["days"],
-            periods=grid["periods"],
-            allowed_periods=tuple(grid["allowed_periods"]),
-        ),
+        grid=grid,
         max_consecutive_periods=constraints.get("max_consecutive_periods", 2),
         block_starts=None if block_starts is None else tuple(block_starts),
     )
+
     issues = check_units_match_courses(problem)
     if issues:
         raise InvalidProblemError("; ".join(f"{x.code}: {x.message}" for x in issues))
+
     return problem
 
 

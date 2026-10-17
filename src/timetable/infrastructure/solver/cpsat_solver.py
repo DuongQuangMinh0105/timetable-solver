@@ -44,7 +44,8 @@ class CpSatSolver:
         solver.parameters.num_workers = options.num_workers
         solver.parameters.random_seed = options.random_seed
 
-        status = _STATUS.get(solver.solve(ctx.model), SolveStatus.UNKNOWN)
+        raw_status = solver.solve(ctx.model)
+        status = _STATUS.get(raw_status, SolveStatus.UNKNOWN)
         if status not in (SolveStatus.OPTIMAL, SolveStatus.FEASIBLE):
             return SolveResult(status=status)
 
@@ -68,5 +69,11 @@ class CpSatSolver:
             status=status,
             timetable=Timetable(tuple(assignments)),
             objective=objective,
+            optimal=(status == SolveStatus.OPTIMAL),
+            objective_bound=(
+                solver.best_objective_bound
+                if ctx.model.has_objective()
+                else None
+            ),
             cost_terms=cost_terms,
         )

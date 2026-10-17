@@ -30,6 +30,26 @@ def test_default_command_runs_worker_and_exits() -> None:
     dispatcher.dispatch("job-abc")
 
 
-def test_default_command_fails_on_invalid_job_id() -> None:
+
+def test_default_command_fails_on_invalid_job_id(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_run(
+        command: list[str],
+        *,
+        env: dict[str, str],
+        check: bool,
+    ) -> None:
+        assert command == [
+            sys.executable,
+            "-m",
+            "timetable.interfaces.worker.main",
+        ]
+        assert env["JOB_ID"] == "job-abc"
+        assert check is True
+        raise subprocess.CalledProcessError(1, command)
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
     with pytest.raises(subprocess.CalledProcessError):
         LocalJobDispatcher(wait=True).dispatch("job-abc")
