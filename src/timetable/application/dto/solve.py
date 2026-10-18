@@ -18,12 +18,14 @@ class SolveOptions:
     num_workers: int = 8
     random_seed: int = 0
 
+
 @dataclass(frozen=True, slots=True)
 class SolveStats:
     wall_time_s: float = 0.0
     num_conflicts: int = 0
     num_branches: int = 0
     num_booleans: int = 0
+
 
 @dataclass(frozen=True, slots=True)
 class SolveResult:
