@@ -3,7 +3,12 @@ from typing import cast
 
 from ortools.sat.python import cp_model
 
-from timetable.application.dto.solve import SolveOptions, SolveResult, SolveStatus
+from timetable.application.dto.solve import (
+    SolveOptions,
+    SolveResult,
+    SolveStats,
+    SolveStatus,
+)
 from timetable.domain.entities import Assignment, Problem, Timetable
 from timetable.infrastructure.solver.builder import build_model
 from timetable.infrastructure.solver.encoder import ConstraintEncoder, ObjectiveApplier
@@ -46,8 +51,16 @@ class CpSatSolver:
 
         raw_status = solver.solve(ctx.model)
         status = _STATUS.get(raw_status, SolveStatus.UNKNOWN)
+
+        stats = SolveStats(
+            wall_time_s=solver.wall_time,
+            num_conflicts=solver.num_conflicts,
+            num_branches=solver.num_branches,
+            num_booleans=solver.num_booleans,
+        )
+
         if status not in (SolveStatus.OPTIMAL, SolveStatus.FEASIBLE):
-            return SolveResult(status=status)
+            return SolveResult(status=status, stats=stats)
 
         # `period` của phân công là tiết BẮT ĐẦU; đơn vị chiếm `duration` tiết từ đó.
         assignments = sorted(
@@ -65,6 +78,7 @@ class CpSatSolver:
             else int(solver.value(cast(cp_model.LinearExprT, expr)))
             for name, expr in ctx.cost_terms.items()
         }
+
         return SolveResult(
             status=status,
             timetable=Timetable(tuple(assignments)),
@@ -72,4 +86,5 @@ class CpSatSolver:
             optimal=(status == SolveStatus.OPTIMAL),
             objective_bound=(solver.best_objective_bound if ctx.model.has_objective() else None),
             cost_terms=cost_terms,
+            stats=stats,
         )
