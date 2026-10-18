@@ -33,7 +33,23 @@ def build_use_case() -> RunJob:
     )
 
 
+def run_single_job(raw_job_id: str) -> None:
+    """Chạy đúng một job rồi thoát, không cần Redis.
+
+    Dùng cho LocalJobDispatcher: API chạy worker như tiến trình con và truyền JOB_ID.
+    Job lỗi thì ném lỗi để tiến trình thoát với mã khác 0 (RunJob đã đánh dấu job failed).
+    """
+    logger.info("Worker started. Running single job %s", raw_job_id)
+    job = build_use_case().execute(UUID(raw_job_id))
+    logger.info("Job %s finished with status %s", job.id, job.status.value)
+
+
 def main() -> None:
+    single_job_id = os.getenv("JOB_ID")
+    if single_job_id:
+        run_single_job(single_job_id)
+        return
+
     redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
     redis_client = Redis.from_url(
         redis_url,

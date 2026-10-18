@@ -6,14 +6,14 @@ def create_submit_solve_job() -> SubmitSolveJob:
     """Build the dependencies required to submit a solve job."""
     # Import infrastructure lazily so importing the API does not
     # immediately initialize the database engine.
-    from timetable.infrastructure.dispatch.redis import RedisJobDispatcher
+    from timetable.infrastructure.dispatch.factory import create_dispatcher
     from timetable.infrastructure.persistence.job_repository import JobRepository
     from timetable.infrastructure.storage.factory import create_storage
 
     return SubmitSolveJob(
         repository=JobRepository(),
         storage=create_storage(),
-        dispatcher=RedisJobDispatcher(),
+        dispatcher=create_dispatcher(),
     )
 
 

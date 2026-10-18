@@ -1,6 +1,6 @@
 # Blueprint cho Render (gói miễn phí): API FastAPI chạy trong Docker.
-# Worker chạy như tiến trình con của API (LocalJobDispatcher), file input và kết quả nằm trong Postgres
-# (Neon) vì Render miễn phí không có ổ đĩa bền.
+# Render miễn phí không có worker nền và không có Redis, nên worker chạy như tiến trình con của API
+# (JOB_DISPATCHER=local). File input và kết quả nằm trong Postgres (Neon) vì không có ổ đĩa bền.
 services:
   - type: web
     name: timetable-solver
@@ -8,11 +8,13 @@ services:
     plan: free
     autoDeployTrigger: checksPass # chỉ deploy khi CI trên GitHub xanh
     healthCheckPath: /health
-        # Lệnh khởi động (chạy migration rồi bật API) nằm ở CMD của Dockerfile. Render tự đặt biến PORT.
+    # Lệnh khởi động (chạy migration rồi bật API) nằm ở CMD của Dockerfile. Render tự đặt biến PORT.
     envVars:
       - key: DATABASE_URL
         sync: false # nhập chuỗi kết nối Neon trong Dashboard, KHÔNG ghi vào repo
       - key: STORAGE_BACKEND
         value: postgres
+      - key: JOB_DISPATCHER
+        value: local # chạy worker như tiến trình con, không cần Redis
       - key: SOLVER_MAX_WORKERS
         value: "1" # Render miễn phí chỉ có 0,1 CPU
