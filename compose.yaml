@@ -16,6 +16,18 @@ services:
       timeout: 3s
       retries: 5
 
+  redis:
+    image: redis:7-alpine
+    container_name: timetable-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
   migrate:
     build:
       context: .
@@ -38,8 +50,9 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg://timetable:timetable_dev@postgres:5432/timetable
       STORAGE_DIR: /app/data/storage
+      REDIS_URL: redis://redis:6379/0
     volumes:
-      - ./data/storage:/app/data/storage
+      - storage_data:/app/data/storage
     command:
       - uv
       - run
@@ -53,6 +66,8 @@ services:
     depends_on:
       migrate:
         condition: service_completed_successfully
+      redis:
+        condition: service_healthy
 
   worker:
     build:
@@ -62,8 +77,9 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg://timetable:timetable_dev@postgres:5432/timetable
       STORAGE_DIR: /app/data/storage
+      REDIS_URL: redis://redis:6379/0
     volumes:
-      - ./data/storage:/app/data/storage
+      - storage_data:/app/data/storage
     command:
       - uv
       - run
@@ -74,6 +90,9 @@ services:
     depends_on:
       migrate:
         condition: service_completed_successfully
+      redis:
+        condition: service_healthy
 
 volumes:
   postgres_data:
+  storage_data:
