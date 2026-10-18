@@ -3,6 +3,10 @@ from typing import Self
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from timetable.application.dto.solve import SolveOptions
+from timetable.domain.constraint_config import (
+    SUPPORTED_CONSTRAINT_CONFIG_VERSIONS,
+    unsupported_version_message,
+)
 
 
 class InputSchema(BaseModel):
@@ -86,6 +90,7 @@ class SolverInput(InputSchema):
 
 class SolveRequest(InputSchema):
     schema_version: str = Field(min_length=1)
+    constraint_config_version: str | None = None
     grid: GridInput
     rooms: list[RoomInput] = Field(min_length=1)
     teachers: list[TeacherInput] = Field(min_length=1)
@@ -95,3 +100,10 @@ class SolveRequest(InputSchema):
     constraints: ConstraintsInput = Field(default_factory=ConstraintsInput)
     soft_weights: dict[str, int | float] = Field(default_factory=dict)
     solver: SolverInput = Field(default_factory=SolverInput)
+
+    @model_validator(mode="after")
+    def validate_constraint_config_version(self) -> Self:
+        version = self.constraint_config_version
+        if version is not None and version not in SUPPORTED_CONSTRAINT_CONFIG_VERSIONS:
+            raise ValueError(unsupported_version_message(version))
+        return self

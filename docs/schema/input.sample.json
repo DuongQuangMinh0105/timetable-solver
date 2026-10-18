@@ -1,5 +1,6 @@
 {
   "schema_version": "0.1",
+  "constraint_config_version": "1.0",
   "_comment": "Dữ liệu mẫu. Danh sách phòng là phòng thật (sức chứa 30 là giá trị tạm); lớp, môn, giáo viên là ví dụ.",
   "grid": {
     "days": 6,

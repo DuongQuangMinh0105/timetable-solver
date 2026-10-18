@@ -76,3 +76,22 @@ def test_solve_request_accepts_empty_lesson_units() -> None:
     assert request.solver.time_limit_s == 60
     assert request.solver.num_workers == 8
     assert request.solver.random_seed == 0
+
+
+def _sample_request(**extra: object) -> dict[str, object]:
+    import json
+    from pathlib import Path
+
+    data = json.loads(Path("docs/schema/input.sample.json").read_text(encoding="utf-8"))
+    data.update(extra)
+    return data  # type: ignore[no-any-return]
+
+
+def test_request_accepts_current_constraint_config_version() -> None:
+    request = SolveRequest.model_validate(_sample_request(constraint_config_version="1.0"))
+    assert request.constraint_config_version == "1.0"
+
+
+def test_request_rejects_unknown_constraint_config_version() -> None:
+    with pytest.raises(ValidationError, match="constraint_config_version"):
+        SolveRequest.model_validate(_sample_request(constraint_config_version="99.0"))

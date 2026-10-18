@@ -15,6 +15,7 @@
 | `DATABASE_URL` | `postgresql+psycopg://<user>:<password>@<host>/<db>?sslmode=require` | Chuỗi kết nối Neon. Nhập trong Render Dashboard, **không commit** |
 | `STORAGE_BACKEND` | `postgres` | `local` (mặc định) dùng thư mục `STORAGE_DIR` |
 | `SOLVER_MAX_WORKERS` | `1` | Giới hạn số luồng của bộ giải, vì Render miễn phí chỉ có 0,1 CPU |
+| `SOLVER_MAX_TIME_S` | tùy chọn, ví dụ `300` | Trần thời gian giải (giây); nhỏ hơn yêu cầu trong input thì lấy giá trị nhỏ hơn. Xem lưu ý CPU bên dưới |
 | `PORT` | do Render đặt | Không cần tự đặt |
 
 ## Triển khai lần đầu
@@ -48,3 +49,14 @@ select convert_from(data, 'UTF8') from blobs where key = 'jobs/<job_id>/result.j
 - Dịch vụ có thể bị khởi động lại bất cứ lúc nào. Job đang chạy lúc đó sẽ kẹt ở trạng thái `running`.
 - File lưu trong Postgres nên bị giới hạn bởi dung lượng gói Neon (chỉ hợp với file JSON nhỏ).
 - Chưa có endpoint xem trạng thái hay kết quả job.
+
+## Lưu ý tài nguyên của bộ giải
+
+- Worker log dòng `Giải với num_workers=..., time_limit_s=...` kèm giá trị người dùng yêu cầu, để biết
+  số luồng và thời gian thực dùng sau khi bị giới hạn bởi `SOLVER_MAX_WORKERS` và `SOLVER_MAX_TIME_S`.
+- Đo cục bộ (bộ "khó": 20 lớp, 8 giáo viên, 118 ca học, seed 1): giải xong trạng thái `OPTIMAL` trong
+  khoảng 10 giây với 1 CPU đầy đủ (cả 1 và 2 luồng). Đây là thời gian **CPU**: Render miễn phí chỉ có
+  0,1 CPU nên thời gian thực (wall time) có thể dài hơn khoảng 10 lần (ước tính, chưa đo trên Render).
+  `time_limit_s` của solver là thời gian thực, nên nếu CPU quá ít, nghiệm có thể chỉ là `FEASIBLE`
+  hoặc `UNKNOWN`. Nâng `time_limit_s` trong input (ví dụ 180 giây) nếu gặp trường hợp này.
+- Không build được Docker trong môi trường kiểm tra nên chưa đo trực tiếp trong container.
