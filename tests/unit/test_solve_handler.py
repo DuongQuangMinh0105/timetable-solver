@@ -62,7 +62,14 @@ def test_result_has_agreed_format() -> None:
 
     result = json.loads(handler(_bytes(_sample())))
 
-    assert set(result) == {"status", "objective", "cost_terms", "assignments", "violations"}
+    assert set(result) == {
+        "constraint_config_version",
+        "status",
+        "objective",
+        "cost_terms",
+        "assignments",
+        "violations",
+    }
     assert result["objective"] is None  # không có hàm mục tiêu
     assert result["cost_terms"] == {}
     assert set(result["assignments"][0]) == {
@@ -179,3 +186,59 @@ def test_workers_unchanged_without_max_workers_env(monkeypatch: pytest.MonkeyPat
 def test_max_workers_env_rejects_invalid_value(monkeypatch: pytest.MonkeyPatch) -> None:
     with pytest.raises(ValueError, match="SOLVER_MAX_WORKERS"):
         _workers_used(monkeypatch, cap="0", requested=8)
+
+
+def _time_limit_used(monkeypatch: pytest.MonkeyPatch, cap: str | None, requested: float) -> float:
+    monkeypatch.delenv("SOLVER_MAX_WORKERS", raising=False)
+    if cap is None:
+        monkeypatch.delenv("SOLVER_MAX_TIME_S", raising=False)
+    else:
+        monkeypatch.setenv("SOLVER_MAX_TIME_S", cap)
+    data = _sample()
+    data["solver"] = {"time_limit_s": requested, "num_workers": 1, "random_seed": 0}
+    solver = _RecordingSolver()
+    make_solve_handler(lambda _p, _d: solver, check_timetable)(_bytes(data))
+    assert solver.options is not None
+    return solver.options.time_limit_s
+
+
+def test_max_time_env_caps_requested_time_limit(monkeypatch: pytest.MonkeyPatch) -> None:
+    assert _time_limit_used(monkeypatch, cap="30", requested=60) == 30
+
+
+def test_max_time_env_does_not_raise_requested_time_limit(monkeypatch: pytest.MonkeyPatch) -> None:
+    assert _time_limit_used(monkeypatch, cap="30", requested=10) == 10
+
+
+def test_time_limit_unchanged_without_max_time_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    assert _time_limit_used(monkeypatch, cap=None, requested=60) == 60
+
+
+@pytest.mark.parametrize("bad", ["0", "abc"])
+def test_max_time_env_rejects_invalid_value(monkeypatch: pytest.MonkeyPatch, bad: str) -> None:
+    with pytest.raises(ValueError, match="SOLVER_MAX_TIME_S"):
+        _time_limit_used(monkeypatch, cap=bad, requested=60)
+
+
+def test_result_carries_constraint_config_version() -> None:
+    from timetable.domain.constraint_config import CONSTRAINT_CONFIG_VERSION
+
+    out = json.loads(
+        make_solve_handler(lambda _p, _d: _RecordingSolver(), check_timetable)(_bytes(_sample()))
+    )
+    assert out["constraint_config_version"] == CONSTRAINT_CONFIG_VERSION
+
+
+def test_unsupported_constraint_config_version_is_rejected() -> None:
+    from timetable.infrastructure.problem_loader import InvalidProblemError
+
+    data = _sample()
+    data["constraint_config_version"] = "99.0"
+    with pytest.raises(InvalidProblemError, match="constraint_config_version"):
+        make_solve_handler(lambda _p, _d: _RecordingSolver(), check_timetable)(_bytes(data))
+
+
+def test_missing_constraint_config_version_is_accepted() -> None:
+    data = _sample()
+    data.pop("constraint_config_version", None)
+    make_solve_handler(lambda _p, _d: _RecordingSolver(), check_timetable)(_bytes(data))

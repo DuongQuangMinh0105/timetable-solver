@@ -3,6 +3,10 @@ from pathlib import Path
 from typing import Any
 
 from timetable.application.dto.solve import SolveOptions
+from timetable.domain.constraint_config import (
+    SUPPORTED_CONSTRAINT_CONFIG_VERSIONS,
+    unsupported_version_message,
+)
 from timetable.domain.entities import (
     ClassGroup,
     Course,
@@ -26,6 +30,9 @@ def problem_from_dict(data: dict[str, Any]) -> Problem:
     Nếu không có `lesson_units` (hoặc rỗng), các ca học được tách từ `courses` theo quy tắc block
     (3 tiết -> 2+1). `constraints.block_starts` (tùy chọn) giới hạn tiết bắt đầu của block 2 tiết.
     """
+    version = data.get("constraint_config_version")
+    if version is not None and version not in SUPPORTED_CONSTRAINT_CONFIG_VERSIONS:
+        raise InvalidProblemError(unsupported_version_message(str(version)))
     grid_data = data["grid"]
     periods = grid_data["periods"]
     grid = TimeGrid(

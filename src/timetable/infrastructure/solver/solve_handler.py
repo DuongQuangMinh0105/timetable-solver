@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 from collections.abc import Callable
 from dataclasses import replace
@@ -9,25 +10,45 @@ from timetable.application.ports.solver import SolverPort
 from timetable.application.ports.timetable_checker import TimetableChecker
 from timetable.application.use_cases.run_job import JobHandler
 from timetable.application.use_cases.solve_timetable import SolveOutcome, SolveTimetable
+from timetable.domain.constraint_config import CONSTRAINT_CONFIG_VERSION
 from timetable.domain.entities import Problem
 from timetable.infrastructure.problem_loader import problem_from_dict, solve_options_from_dict
+
+logger = logging.getLogger(__name__)
 
 # Dựng bộ giải cho từng bài toán (cần Problem để biết môn MBA và dữ liệu đầu vào để lấy trọng số).
 SolverFactory = Callable[[Problem, dict[str, Any]], SolverPort]
 
 
-def _cap_workers(options: SolveOptions) -> SolveOptions:
-    """Giới hạn số luồng của bộ giải theo biến SOLVER_MAX_WORKERS (nếu có).
-
-    Nơi chạy ít CPU (ví dụ Render miễn phí chỉ có 0,1 CPU) chạy nhiều luồng chỉ tốn thêm CPU và RAM.
-    """
-    raw = os.getenv("SOLVER_MAX_WORKERS")
+def _positive_env(name: str, cast: Callable[[str], float]) -> float | None:
+    raw = os.getenv(name)
     if not raw:
-        return options
-    cap = int(raw)
-    if cap < 1:
-        raise ValueError(f"SOLVER_MAX_WORKERS phải >= 1, nhận được {raw!r}")
-    return replace(options, num_workers=min(options.num_workers, cap))
+        return None
+    try:
+        value = cast(raw)
+    except ValueError:
+        raise ValueError(f"{name} không hợp lệ: {raw!r}") from None
+    if value < 1:
+        raise ValueError(f"{name} phải >= 1, nhận được {raw!r}")
+    return value
+
+
+def _cap_options(options: SolveOptions) -> SolveOptions:
+    """Giới hạn số luồng và thời gian giải theo biến môi trường của nơi chạy (nếu có).
+
+    - `SOLVER_MAX_WORKERS`: nơi chạy ít CPU (Render miễn phí chỉ có 0,1 CPU) chạy nhiều luồng chỉ
+      tốn thêm CPU và RAM.
+    - `SOLVER_MAX_TIME_S`: trần thời gian giải, đặt nhỏ hơn timeout của nơi chạy để bộ giải trả
+      về nghiệm tốt nhất đã có thay vì bị hệ thống giết giữa chừng.
+    """
+    workers = _positive_env("SOLVER_MAX_WORKERS", int)
+    seconds = _positive_env("SOLVER_MAX_TIME_S", float)
+    capped = options
+    if workers is not None:
+        capped = replace(capped, num_workers=min(capped.num_workers, int(workers)))
+    if seconds is not None:
+        capped = replace(capped, time_limit_s=min(capped.time_limit_s, seconds))
+    return capped
 
 
 class InvalidTimetableError(Exception):
@@ -61,6 +82,7 @@ def outcome_to_dict(problem: Problem, outcome: SolveOutcome) -> dict[str, Any]:
     if objective is not None and objective == int(objective):
         objective = int(objective)
     return {
+        "constraint_config_version": CONSTRAINT_CONFIG_VERSION,
         "status": result.status.value,
         "objective": objective,
         "cost_terms": result.cost_terms,
@@ -83,7 +105,15 @@ def make_solve_handler(solver_factory: SolverFactory, checker: TimetableChecker)
     def handler(data: bytes) -> bytes:
         payload = json.loads(data)
         problem = problem_from_dict(payload)
-        options = _cap_workers(solve_options_from_dict(payload))
+        requested = solve_options_from_dict(payload)
+        options = _cap_options(requested)
+        logger.info(
+            "Giải với num_workers=%s (yêu cầu %s), time_limit_s=%s (yêu cầu %s)",
+            options.num_workers,
+            requested.num_workers,
+            options.time_limit_s,
+            requested.time_limit_s,
+        )
         solver = solver_factory(problem, payload)
         outcome = SolveTimetable(solver, checker).execute(problem, options)
         if outcome.violations:

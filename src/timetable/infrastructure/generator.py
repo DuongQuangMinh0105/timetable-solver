@@ -11,6 +11,7 @@ import itertools
 import random
 from typing import Any, NamedTuple
 
+from timetable.domain.constraint_config import CONSTRAINT_CONFIG_VERSION
 from timetable.domain.rules.soft_constraints import W_G316, W_ROOM, W_SAT
 
 SCHEMA_VERSION = "0.1"
@@ -149,6 +150,7 @@ def generate_v1(
 
     return {
         "schema_version": SCHEMA_VERSION,
+        "constraint_config_version": CONSTRAINT_CONFIG_VERSION,
         "_comment": f"Dữ liệu sinh tự động bởi generator v1 (seed={seed}).",
         "grid": {
             "days": NUM_DAYS,

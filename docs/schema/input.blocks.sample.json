@@ -1,5 +1,6 @@
 {
   "schema_version": "0.1",
+  "constraint_config_version": "1.0",
   "_comment": "Dữ liệu mẫu dạng block: lesson_units để trống nên loader tự tách môn thành block 2+1 (3 tiết = 2+1). block_starts [0,2,4] chỉ cho block 2 tiết bắt đầu ở tiết 1, 3, 5.",
   "grid": {
     "days": 6,

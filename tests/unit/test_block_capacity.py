@@ -96,3 +96,15 @@ def test_formula_matches_solver_for_a_single_class() -> None:
         status = CpSatSolver().solve(problem, OPTIONS).status
         solved = status in (SolveStatus.OPTIMAL, SolveStatus.FEASIBLE)
         assert solved == predicted, (seed, days, [c.periods_per_week for c in courses])
+
+
+def test_thirty_periods_per_class_is_infeasible_so_the_cap_is_24() -> None:
+    """Spec cũ ghi 30 tiết/tuần/lớp: không xếp được, vì mỗi ngày tối đa 4 tiết (2+2 hoặc 2+1+1)."""
+    problem = _empty()
+    assert not any(
+        class_fits(problem, threes + twos_only, threes)
+        for threes in range(11)
+        for twos_only in range(16)
+        if 3 * threes + 2 * twos_only == 30
+    )
+    assert class_fits(problem, 12, 0)  # 12 môn 2 tiết = 24 tiết vẫn vừa
