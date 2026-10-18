@@ -43,15 +43,9 @@ def test_concurrent_solve_requests_persist_independent_jobs() -> None:
                 "periods": 6,
                 "allowed_periods": [0, 1, 2, 3, 4, 5],
             },
-            "rooms": [
-                {"id": f"room-{i}", "name": f"Room {i}", "capacity": 30}
-            ],
-            "teachers": [
-                {"id": f"teacher-{i}", "name": f"Teacher {i}"}
-            ],
-            "class_groups": [
-                {"id": f"class-{i}", "name": f"Class {i}", "size": 25}
-            ],
+            "rooms": [{"id": f"room-{i}", "name": f"Room {i}", "capacity": 30}],
+            "teachers": [{"id": f"teacher-{i}", "name": f"Teacher {i}"}],
+            "class_groups": [{"id": f"class-{i}", "name": f"Class {i}", "size": 25}],
             "courses": [
                 {
                     "id": f"course-{i}",
@@ -68,6 +62,7 @@ def test_concurrent_solve_requests_persist_independent_jobs() -> None:
     job_ids: list[UUID] = []
 
     try:
+
         def submit(payload: dict[str, object]) -> tuple[int, dict]:
             with TestClient(app) as client:
                 response = client.post("/solve", json=payload)
@@ -82,9 +77,7 @@ def test_concurrent_solve_requests_persist_independent_jobs() -> None:
         assert len(set(job_ids)) == len(payloads)
 
         expected_by_job_id = {
-            UUID(body["job_id"]): SolveRequest.model_validate(payload).model_dump(
-                mode="json"
-            )
+            UUID(body["job_id"]): SolveRequest.model_validate(payload).model_dump(mode="json")
             for (_, body), payload in zip(responses, payloads, strict=True)
         }
 
@@ -106,10 +99,6 @@ def test_concurrent_solve_requests_persist_independent_jobs() -> None:
             input_refs = [f"inputs/{job_id}.json" for job_id in job_ids]
 
             with SessionFactory() as session:
-                session.execute(
-                    delete(JobModel).where(JobModel.id.in_(job_ids))
-                )
-                session.execute(
-                    delete(BlobModel).where(BlobModel.key.in_(input_refs))
-                )
+                session.execute(delete(JobModel).where(JobModel.id.in_(job_ids)))
+                session.execute(delete(BlobModel).where(BlobModel.key.in_(input_refs)))
                 session.commit()
