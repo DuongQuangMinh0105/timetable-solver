@@ -19,6 +19,13 @@ Implementation map:
 |---|---|
 | Weights and independent penalty calculator (`reference_cost`) | `src/timetable/domain/rules/soft_constraints.py` |
 | Objective function (`add_soft_objective`) | `infrastructure/solver/soft_objective.py` |
+| Default wiring and per-course session mapping | `infrastructure/solver/cpsat_solver.py`, `infrastructure/solver/soft_adapter.py` |
+
+`CpSatSolver` applies this objective by default. Inputs may override the default
+weights through `soft_weights.room_stability`, `soft_weights.avoid_saturday`,
+and `soft_weights.reserve_mba_room`; otherwise the defaults in this document
+are used. A custom `ObjectiveApplier` passed to `CpSatSolver` replaces the
+default objective.
 
 ## 2. Calendar frame
 

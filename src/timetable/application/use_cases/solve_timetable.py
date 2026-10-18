@@ -1,9 +1,11 @@
 from dataclasses import dataclass
 
+from timetable.application.dto.diagnosis_report import DiagnosisReport
 from timetable.application.dto.solve import SolveOptions, SolveResult, SolveStatus
 from timetable.application.ports.solver import SolverPort
 from timetable.application.ports.timetable_checker import TimetableChecker
 from timetable.domain.entities import Problem
+from timetable.domain.services.precheck import diagnose_problem
 from timetable.domain.validator import Violation
 
 
@@ -13,6 +15,7 @@ class SolveOutcome:
 
     result: SolveResult
     violations: tuple[Violation, ...] = ()
+    diagnosis: DiagnosisReport | None = None
 
     @property
     def ok(self) -> bool:
@@ -35,6 +38,13 @@ class SolveTimetable:
     def execute(self, problem: Problem, options: SolveOptions | None = None) -> SolveOutcome:
         result = self._solver.solve(problem, options or SolveOptions())
         if result.timetable is None:
-            return SolveOutcome(result=result)
+            diagnosis = None
+            if result.status is SolveStatus.INFEASIBLE:
+                issues = diagnose_problem(problem)
+                diagnosis = DiagnosisReport(
+                    issues=tuple(issues),
+                    source="precheck" if issues else "none",
+                )
+            return SolveOutcome(result=result, diagnosis=diagnosis)
         violations = self._checker(problem, result.timetable)
         return SolveOutcome(result=result, violations=tuple(violations))

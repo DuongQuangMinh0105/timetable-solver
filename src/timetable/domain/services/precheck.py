@@ -10,6 +10,9 @@ from collections import defaultdict
 from collections.abc import Iterable
 from dataclasses import dataclass
 
+from timetable.domain.entities import Problem
+from timetable.domain.services.room_policy import allowed_rooms_by_unit
+
 
 @dataclass(frozen=True)
 class OfferingInfo:
@@ -25,6 +28,55 @@ class Issue:
     code: str
     message: str
     suggestion: str
+
+
+def diagnose_problem(problem: Problem) -> list[Issue]:
+    """Return only provable capacity/eligibility causes for an infeasible problem."""
+    room_options = allowed_rooms_by_unit(problem)
+    issues: list[Issue] = []
+    units_by_room_type: dict[str, list[str]] = defaultdict(list)
+    for unit in problem.lesson_units:
+        eligible = room_options[unit.id]
+        if not eligible:
+            issues.append(
+                Issue(
+                    "no_eligible_room",
+                    f"Unit {unit.id} has no room with the required type and capacity.",
+                    "Add a suitable room or reduce the class size.",
+                )
+            )
+        units_by_room_type[unit.required_room_type].append(unit.id)
+
+    # These aggregate bounds ignore clashes between classes and teachers, so they can
+    # prove infeasibility without incorrectly rejecting a potentially feasible schedule.
+    for room_type, unit_ids in sorted(units_by_room_type.items()):
+        eligible_rooms = {room.id for unit_id in unit_ids for room in room_options[unit_id]}
+        capacity = len(eligible_rooms) * problem.grid.num_slots
+        if eligible_rooms and len(unit_ids) > capacity:
+            issues.append(
+                Issue(
+                    f"{room_type}_room_capacity",
+                    f"{len(unit_ids)} {room_type} units exceed the "
+                    f"{capacity} available room slots.",
+                    "Add suitable rooms or reduce the number of scheduled units.",
+                )
+            )
+
+    units_by_teacher: dict[str, int] = defaultdict(int)
+    for unit in problem.lesson_units:
+        units_by_teacher[unit.teacher_id] += 1
+    for teacher_id, load in sorted(units_by_teacher.items()):
+        if load > problem.grid.num_slots:
+            issues.append(
+                Issue(
+                    "teacher_overload",
+                    f"Teacher {teacher_id} needs {load} units, but can use at most "
+                    f"{problem.grid.num_slots} slots.",
+                    "Reduce this teacher's load or assign another teacher.",
+                )
+            )
+
+    return issues
 
 
 def precheck(

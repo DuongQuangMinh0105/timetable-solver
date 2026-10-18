@@ -19,6 +19,12 @@ Mỗi ràng buộc là một `ConstraintEncoder` có `name` và `encode(ctx: Mod
 - Ràng buộc cứng: thêm điều kiện vào `ctx.model`.
 - Ràng buộc mềm: thêm `(trọng số, biến phạt)` vào `ctx.penalties`.
   `ObjectiveBuilder` (P2) cộng `sum(w * biến)` làm hàm mục tiêu.
+- `CpSatSolver` mặc định áp dụng `SoftObjectiveApplier` và hàm mục tiêu trong
+  `infrastructure/solver/soft_objective.py`; có thể truyền objective riêng để
+  thay thế hành vi mặc định.
+- Nếu solver trả về `INFEASIBLE`, `SolveTimetable` đính kèm các nguyên nhân chắc chắn
+  phát hiện được từ kiểm tra sức chứa/phòng hợp lệ. Báo cáo rỗng (`source="none"`)
+  nghĩa là precheck chưa xác định được nguyên nhân; không phải kết luận bài toán có nghiệm.
 
 ## Gợi ý cho P2
 - `RoomStability`: khóa `k` = `Course.id`. `use[k, r]` = 1 nếu môn `k` dùng phòng `r`

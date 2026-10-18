@@ -6,8 +6,9 @@ from solver_helpers import OPTIONS, make_problem, one_day_grid, unit
 from timetable.application.dto.solve import SolveResult, SolveStatus
 from timetable.application.use_cases.solve_timetable import SolveTimetable
 from timetable.domain.entities import Assignment, Problem, Timetable
+from timetable.domain.rules.soft_constraints import reference_cost
 from timetable.domain.services.timetable_checker import check_timetable
-from timetable.domain.validator import Violation
+from timetable.domain.validator import Validator, Violation
 from timetable.infrastructure.problem_loader import (
     problem_from_dict,
     solve_options_from_dict,
@@ -35,6 +36,22 @@ def test_use_case_reports_infeasible_without_checking() -> None:
     assert outcome.result.status is SolveStatus.INFEASIBLE
     assert not outcome.ok
     assert outcome.violations == ()
+    assert outcome.diagnosis is not None
+    assert outcome.diagnosis.source == "none"
+
+
+def test_use_case_diagnoses_units_without_an_eligible_room() -> None:
+    from timetable.domain.entities import Room
+
+    problem = make_problem(
+        [unit("a", "C", "T1", room_type="mba")],
+        rooms=(Room("R1", "R1", 30),),
+    )
+    outcome = SolveTimetable(CpSatSolver(), check_timetable).execute(problem, OPTIONS)
+    assert outcome.result.status is SolveStatus.INFEASIBLE
+    assert outcome.diagnosis is not None
+    assert outcome.diagnosis.source == "precheck"
+    assert outcome.diagnosis.issues[0].code == "no_eligible_room"
 
 
 def test_use_case_surfaces_checker_violations(sample_problem: Problem) -> None:
@@ -112,7 +129,47 @@ def test_loader_solves_split_sample() -> None:
     assert outcome.ok, outcome.violations
 
 
+def test_generator_with_many_special_classes_solves_and_validates() -> None:
+    from timetable.infrastructure.generator import generate_v1
+
+    data = generate_v1(
+        num_classes=10,
+        num_teachers=8,
+        seed=23,
+        num_mba_classes=4,
+        num_art_classes=4,
+    )
+    problem = problem_from_dict(data)
+    outcome = SolveTimetable(CpSatSolver(), check_timetable).execute(problem, OPTIONS)
+    assert outcome.ok, outcome.violations
+    assert outcome.result.timetable is not None
+    assert outcome.violations == ()
+    assert Validator().validate(problem, outcome.result.timetable) == []
+    assert outcome.result.objective is not None
+    assert set(outcome.result.cost_terms) == {"room", "sat", "g316"}
+
+    course_by_unit = {unit.id: unit.course_id for unit in problem.lesson_units}
+    schedule = [
+        (course_by_unit[a.unit_id], a.day, a.period, a.room_id)
+        for a in outcome.result.timetable.assignments
+    ]
+    mba_courses = {
+        unit.course_id for unit in problem.lesson_units if unit.required_room_type == "mba"
+    }
+    assert outcome.result.cost_terms == reference_cost(schedule, {5}, mba_courses, "G316")
+
+
 def test_solve_options_from_dict() -> None:
     assert solve_options_from_dict({"solver": {"time_limit_s": 5, "random_seed": 7}}) == replace(
         solve_options_from_dict({}), time_limit_s=5, random_seed=7
     )
+
+
+def test_problem_loader_reads_soft_weights() -> None:
+    data = json.loads(SAMPLE_PATH.read_text(encoding="utf-8"))
+    data["soft_weights"] = {
+        "room_stability": 7,
+        "avoid_saturday": 11,
+        "reserve_mba_room": 3,
+    }
+    assert problem_from_dict(data).soft_weights == (7, 11, 3)

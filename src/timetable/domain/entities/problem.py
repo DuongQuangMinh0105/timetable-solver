@@ -6,6 +6,7 @@ from timetable.domain.entities.lesson_unit import LessonUnit
 from timetable.domain.entities.room import Room
 from timetable.domain.entities.teacher import Teacher
 from timetable.domain.entities.time_grid import TimeGrid
+from timetable.domain.rules.soft_constraints import W_G316, W_ROOM, W_SAT
 
 
 @dataclass(frozen=True, slots=True)
@@ -24,3 +25,11 @@ class Problem:
     # None: bắt đầu ở tiết nào cũng được miễn mọi tiết bị chiếm đều hợp lệ.
     # Ví dụ (0, 2, 4): chỉ block căn cặp 1-2, 3-4, 5-6.
     block_starts: tuple[int, ...] | None = None
+    # Trọng số theo thứ tự room stability, avoid Saturday, reserve G316.
+    soft_weights: tuple[int, int, int] = (W_ROOM, W_SAT, W_G316)
+
+    def __post_init__(self) -> None:
+        if len(self.soft_weights) != 3 or any(
+            not isinstance(weight, int) or weight < 0 for weight in self.soft_weights
+        ):
+            raise ValueError("soft_weights phải gồm 3 số nguyên không âm")

@@ -12,6 +12,7 @@ from timetable.domain.entities import (
     Teacher,
     TimeGrid,
 )
+from timetable.domain.rules.soft_constraints import W_G316, W_ROOM, W_SAT
 from timetable.domain.services.unit_splitter import lesson_units_for_course
 
 
@@ -29,6 +30,7 @@ def problem_from_dict(data: dict[str, Any]) -> Problem:
         units = tuple(u for course in courses for u in lesson_units_for_course(course))
     constraints = data.get("constraints", {})
     block_starts = constraints.get("block_starts")
+    weights = data.get("soft_weights", {})
     return Problem(
         rooms=tuple(
             Room(
@@ -51,6 +53,11 @@ def problem_from_dict(data: dict[str, Any]) -> Problem:
         ),
         max_consecutive_periods=constraints.get("max_consecutive_periods", 2),
         block_starts=None if block_starts is None else tuple(block_starts),
+        soft_weights=(
+            weights.get("room_stability", W_ROOM),
+            weights.get("avoid_saturday", W_SAT),
+            weights.get("reserve_mba_room", W_G316),
+        ),
     )
 
 

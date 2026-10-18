@@ -43,7 +43,7 @@ class SoftObjectiveApplier:
         sessions: Mapping[SessionKey, cp_model.IntVar] = {
             key: self._merge(ctx, key, variables) for key, variables in grouped.items()
         }
-        offerings: Iterable[str] = [c.id for c in ctx.problem.courses]
+        offerings: Iterable[str] = sorted({course_id for course_id, *_ in sessions})
         kwargs: dict[str, object] = {}
         if self._weights is not None:
             kwargs["weights"] = self._weights
