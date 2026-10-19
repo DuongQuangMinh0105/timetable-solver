@@ -1,4 +1,3 @@
-
 from timetable.domain.services.precheck import Issue, OfferingInfo, precheck
 
 

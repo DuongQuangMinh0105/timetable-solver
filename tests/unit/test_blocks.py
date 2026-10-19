@@ -34,10 +34,7 @@ def test_block_starts_are_aligned() -> None:
         block_starts=ALIGNED,
     )
 
-    starts = [
-        slot.period
-        for slot in allowed_starts(problem, problem.lesson_units[0])
-    ]
+    starts = [slot.period for slot in allowed_starts(problem, problem.lesson_units[0])]
 
     assert starts == [0, 2, 4]
 
@@ -48,9 +45,7 @@ def test_block_cannot_start_at_last_allowed_period() -> None:
         grid=SIX,
     )
 
-    assert Slot(0, 5) not in set(
-        allowed_starts(problem, problem.lesson_units[0])
-    )
+    assert Slot(0, 5) not in set(allowed_starts(problem, problem.lesson_units[0]))
 
 
 def test_two_blocks_same_day_need_a_rest() -> None:
@@ -68,16 +63,11 @@ def test_two_blocks_same_day_need_a_rest() -> None:
 
     check_valid(problem, result.timetable)
 
-    assert sorted(
-        assignment.period for assignment in result.timetable.assignments
-    ) == [0, 4]
+    assert sorted(assignment.period for assignment in result.timetable.assignments) == [0, 4]
 
 
 def test_three_blocks_one_day_infeasible() -> None:
-    units = [
-        unit(course_id, "C", f"T{course_id}", duration=2)
-        for course_id in "abc"
-    ]
+    units = [unit(course_id, "C", f"T{course_id}", duration=2) for course_id in "abc"]
     problem = make_problem(units, grid=SIX, block_starts=ALIGNED)
 
     assert solve(problem).status is SolveStatus.INFEASIBLE

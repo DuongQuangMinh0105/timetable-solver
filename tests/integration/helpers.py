@@ -51,11 +51,7 @@ def solve(
 
     for offering in offerings:
         model.add(
-            sum(
-                variable
-                for key, variable in assignments.items()
-                if key[0] == offering
-            )
+            sum(variable for key, variable in assignments.items() if key[0] == offering)
             == sessions[offering]
         )
 
@@ -73,11 +69,7 @@ def solve(
         for period in STARTS:
             for room in rooms:
                 model.add(
-                    sum(
-                        assignments[offering, day, period, room]
-                        for offering in offerings
-                    )
-                    <= 1
+                    sum(assignments[offering, day, period, room] for offering in offerings) <= 1
                 )
 
     raw_costs = add_soft_objective(
@@ -100,12 +92,7 @@ def solve(
     solver.parameters.num_workers = 1
     status = solver.solve(model)
 
-    schedule = [
-        key for key, variable in assignments.items() if solver.value(variable)
-    ]
-    cost_values = {
-        name: _value(solver, expression)
-        for name, expression in costs.items()
-    }
+    schedule = [key for key, variable in assignments.items() if solver.value(variable)]
+    cost_values = {name: _value(solver, expression) for name, expression in costs.items()}
 
     return solver, int(status), cost_values, schedule

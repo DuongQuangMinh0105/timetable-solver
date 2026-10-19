@@ -22,9 +22,7 @@ from timetable.infrastructure.solver.solve_handler import (
 
 
 def _sample() -> dict[str, Any]:
-    data: dict[str, Any] = json.loads(
-        SAMPLE_PATH.read_text(encoding="utf-8")
-    )
+    data: dict[str, Any] = json.loads(SAMPLE_PATH.read_text(encoding="utf-8"))
     data["solver"] = {
         "time_limit_s": 30,
         "num_workers": 1,
@@ -55,11 +53,7 @@ def test_handler_solves_sample_with_soft_objective() -> None:
     assert result["objective"] is not None
 
     if result["status"] == "OPTIMAL":
-        mba = {
-            course["id"]
-            for course in data["courses"]
-            if course["required_room_type"] == "mba"
-        }
+        mba = {course["id"] for course in data["courses"] if course["required_room_type"] == "mba"}
 
         sessions = [
             (
@@ -73,13 +67,16 @@ def test_handler_solves_sample_with_soft_objective() -> None:
 
         weights = soft_weights_from_dict(data)
 
-        assert reference_cost(
-            sessions,
-            {5},
-            mba,
-            "G316",
-            weights,
-        ) == result["cost_terms"]
+        assert (
+            reference_cost(
+                sessions,
+                {5},
+                mba,
+                "G316",
+                weights,
+            )
+            == result["cost_terms"]
+        )
 
 
 def test_result_has_agreed_format() -> None:
@@ -152,8 +149,7 @@ def test_handler_works_with_fake_solver() -> None:
         ) -> SolveResult:
             timetable = Timetable(
                 tuple(
-                    Assignment(unit.id, 0, 0, problem.rooms[0].id)
-                    for unit in problem.lesson_units
+                    Assignment(unit.id, 0, 0, problem.rooms[0].id) for unit in problem.lesson_units
                 )
             )
 
@@ -195,24 +191,16 @@ def test_soft_weights_follow_input_order_room_sat_g316() -> None:
 
 
 def test_soft_weights_use_defaults_when_missing() -> None:
-    assert soft_weights_from_dict({}) == soft_weights_from_dict(
-        {"soft_weights": {}}
-    )
+    assert soft_weights_from_dict({}) == soft_weights_from_dict({"soft_weights": {}})
 
-    assert soft_weights_from_dict(
-        {"soft_weights": {"avoid_saturday": 7}}
-    )[1] == 7
+    assert soft_weights_from_dict({"soft_weights": {"avoid_saturday": 7}})[1] == 7
 
 
 def test_soft_weights_accept_whole_floats_and_reject_fractions() -> None:
-    assert soft_weights_from_dict(
-        {"soft_weights": {"avoid_saturday": 10.0}}
-    )[1] == 10
+    assert soft_weights_from_dict({"soft_weights": {"avoid_saturday": 10.0}})[1] == 10
 
     with pytest.raises(ValueError, match="avoid_saturday"):
-        soft_weights_from_dict(
-            {"soft_weights": {"avoid_saturday": 2.5}}
-        )
+        soft_weights_from_dict({"soft_weights": {"avoid_saturday": 2.5}})
 
 
 class _RecordingSolver:

@@ -1,4 +1,3 @@
-
 from pathlib import Path
 from uuid import UUID, uuid4
 
@@ -46,8 +45,7 @@ class InMemoryJobRepository:
             (
                 job
                 for job in self.jobs.values()
-                if job.status is JobStatus.QUEUED
-                and (after_id is None or job.id > after_id)
+                if job.status is JobStatus.QUEUED and (after_id is None or job.id > after_id)
             ),
             key=lambda job: job.id,
         )

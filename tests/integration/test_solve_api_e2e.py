@@ -22,12 +22,7 @@ from timetable.interfaces.api.dependencies import get_submit_solve_job
 from timetable.interfaces.api.main import app
 
 # Định nghĩa SAMPLE_PATH ở cấp độ module (đúng chuẩn và tránh lỗi type/used-before-def)
-SAMPLE_PATH = (
-    Path(__file__).resolve().parents[2]
-    / "docs"
-    / "schema"
-    / "input.sample.json"
-)
+SAMPLE_PATH = Path(__file__).resolve().parents[2] / "docs" / "schema" / "input.sample.json"
 
 
 def test_container_storage_follows_storage_dir_env(

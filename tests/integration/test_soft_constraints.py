@@ -17,12 +17,8 @@ def test_room_stability_keeps_one_room() -> None:
 
 
 def test_room_stability_forced_change() -> None:
-    forbidden = [
-        ("A", 1, period, "R1")
-        for period in (1, 3, 5)
-    ] + [
-        ("A", 0, period, "R2")
-        for period in (1, 3, 5)
+    forbidden = [("A", 1, period, "R1") for period in (1, 3, 5)] + [
+        ("A", 0, period, "R2") for period in (1, 3, 5)
     ]
 
     _, status, costs, _ = solve(
@@ -38,10 +34,7 @@ def test_room_stability_forced_change() -> None:
 
 
 def test_saturday_counts_session_once() -> None:
-    forbidden = [
-        ("A", 0, period, "R1")
-        for period in (1, 3, 5)
-    ]
+    forbidden = [("A", 0, period, "R1") for period in (1, 3, 5)]
 
     _, _, costs, _ = solve(
         ["A"],
@@ -77,10 +70,7 @@ def test_non_mba_avoids_g316() -> None:
 
 
 def test_non_mba_in_g316_when_forced() -> None:
-    forbidden = [
-        ("A", 0, period, "G317")
-        for period in (1, 3, 5)
-    ]
+    forbidden = [("A", 0, period, "G317") for period in (1, 3, 5)]
 
     _, _, costs, _ = solve(
         ["A"],

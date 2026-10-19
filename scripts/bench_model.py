@@ -148,9 +148,7 @@ def main() -> None:
                 elapsed = time.time() - started
 
                 violations = (
-                    check_timetable(problem, result.timetable)
-                    if result.timetable
-                    else None
+                    check_timetable(problem, result.timetable) if result.timetable else None
                 )
 
                 print(

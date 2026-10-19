@@ -11,11 +11,7 @@ def longest_run(periods: list[int]) -> int:
     previous: int | None = None
 
     for period in sorted(periods):
-        run = (
-            run + 1
-            if previous is not None and period == previous + 1
-            else 1
-        )
+        run = run + 1 if previous is not None and period == previous + 1 else 1
         best = max(best, run)
         previous = period
 
@@ -31,9 +27,7 @@ def check_timetable(problem: Problem, timetable: Timetable) -> list[Violation]:
     violations: list[Violation] = []
 
     def bad(rule_id: str, description: str) -> None:
-        violations.append(
-            Violation(rule_id=rule_id, description=description)
-        )
+        violations.append(Violation(rule_id=rule_id, description=description))
 
     units = {unit.id: unit for unit in problem.lesson_units}
     rooms = {room.id: room for room in problem.rooms}
@@ -68,10 +62,7 @@ def check_timetable(problem: Problem, timetable: Timetable) -> list[Violation]:
 
         seen.add(assignment.unit_id)
 
-        starts = {
-            (slot.day, slot.period)
-            for slot in allowed_starts(problem, unit)
-        }
+        starts = {(slot.day, slot.period) for slot in allowed_starts(problem, unit)}
 
         if (assignment.day, assignment.period) not in starts:
             bad(

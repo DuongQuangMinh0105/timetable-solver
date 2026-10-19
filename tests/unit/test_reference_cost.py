@@ -1,4 +1,3 @@
-
 from timetable.domain.rules.soft_constraints import (
     W_G316,
     W_ROOM,
