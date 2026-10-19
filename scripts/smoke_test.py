@@ -16,6 +16,12 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
+# Ép Python sử dụng UTF-8 khi in ra console trên Windows để tránh lỗi UnicodeEncodeError
+if sys.stdout.encoding != "utf-8":
+    sys.stdout.reconfigure(encoding="utf-8")
+if sys.stderr.encoding != "utf-8":
+    sys.stderr.reconfigure(encoding="utf-8")
+
 DEFAULT_INPUT = Path(__file__).resolve().parents[1] / "docs" / "schema" / "input.sample.json"
 SUCCESS_STATUSES = {"DONE", "COMPLETED"}
 FAILURE_STATUSES = {"FAILED", "ERROR"}
@@ -93,7 +99,7 @@ def run(base_url: str, input_path: Path, wake_timeout: float, timeout: float, po
     print(f"Smoke test: {base_url}")
 
     woke_in = wait_until_healthy(base_url, wake_timeout, poll)
-    print(f"1. /health ổn sau {woke_in:.1f}s")
+    print(f"1. /health ok sau {woke_in:.1f}s")
 
     start = time.monotonic()
     job_id = submit_job(base_url, input_path.read_bytes())

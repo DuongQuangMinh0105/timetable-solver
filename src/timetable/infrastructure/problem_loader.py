@@ -16,6 +16,7 @@ from timetable.domain.entities import (
     Teacher,
     TimeGrid,
 )
+from timetable.domain.rules.soft_constraints import W_G316, W_ROOM, W_SAT  # THÊM IMPORT NÀY
 from timetable.domain.services.unit_consistency import check_units_match_courses
 from timetable.domain.services.unit_splitter import lesson_units_for_course
 
@@ -25,14 +26,11 @@ class InvalidProblemError(ValueError):
 
 
 def problem_from_dict(data: dict[str, Any]) -> Problem:
-    """Dựng `Problem` từ dữ liệu theo schema `docs/schema/input.sample.json`.
-
-    Nếu không có `lesson_units` (hoặc rỗng), các ca học được tách từ `courses` theo quy tắc block
-    (3 tiết -> 2+1). `constraints.block_starts` (tùy chọn) giới hạn tiết bắt đầu của block 2 tiết.
-    """
+    """Dựng `Problem` từ dữ liệu theo schema `docs/schema/input.sample.json`."""
     version = data.get("constraint_config_version")
     if version is not None and version not in SUPPORTED_CONSTRAINT_CONFIG_VERSIONS:
         raise InvalidProblemError(unsupported_version_message(str(version)))
+
     grid_data = data["grid"]
     periods = grid_data["periods"]
     grid = TimeGrid(
@@ -50,6 +48,15 @@ def problem_from_dict(data: dict[str, Any]) -> Problem:
 
     constraints = data.get("constraints", {})
     block_starts = constraints.get("block_starts")
+
+    # --- THÊM ĐOẠN XỬ LÝ SOFT WEIGHTS ---
+    weights_dict = data.get("soft_weights", {})
+    soft_weights = (
+        weights_dict.get("room_stability", W_ROOM),
+        weights_dict.get("avoid_saturday", W_SAT),
+        weights_dict.get("reserve_mba_room", W_G316),
+    )
+    # -------------------------------------
 
     problem = Problem(
         rooms=tuple(
@@ -69,6 +76,7 @@ def problem_from_dict(data: dict[str, Any]) -> Problem:
         grid=grid,
         max_consecutive_periods=constraints.get("max_consecutive_periods", 2),
         block_starts=None if block_starts is None else tuple(block_starts),
+        soft_weights=soft_weights,  # <-- Truyền vào Problem
     )
 
     issues = check_units_match_courses(problem)
