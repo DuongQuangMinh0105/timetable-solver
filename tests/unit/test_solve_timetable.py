@@ -38,7 +38,10 @@ def test_use_case_reports_infeasible_without_checking() -> None:
 
 
 def test_use_case_surfaces_checker_violations(sample_problem: Problem) -> None:
-    def always_bad(_p: Problem, _t: Timetable) -> list[Violation]:
+    def always_bad(
+        problem: Problem,
+        timetable: Timetable,
+    ) -> list[Violation]:
         return [Violation("X", "lỗi giả")]
 
     outcome = SolveTimetable(CpSatSolver(), always_bad).execute(sample_problem, OPTIONS)

@@ -13,11 +13,7 @@ class JobNotFoundError(Exception):
 
 
 class RunJob:
-    """Chạy một job: đọc input từ storage, xử lý, ghi kết quả, cập nhật trạng thái.
-
-    `handler` nhận bytes đầu vào và trả bytes kết quả. Hôm nay là solver giả,
-    sau này sẽ thay bằng handler gọi SolveTimetable.
-    """
+    """Run a queued job and persist its result and final status."""
 
     def __init__(
         self,
@@ -33,24 +29,39 @@ class RunJob:
 
     def execute(self, job_id: UUID) -> Job:
         job = self._repository.get_by_id(job_id)
+
         if job is None:
             raise JobNotFoundError(str(job_id))
 
-        job.status = JobStatus.RUNNING
-        self._repository.update(job)
+        claimed_job = self._repository.claim_queued_job(job_id)
+
+        if claimed_job is None:
+            # Another worker may already have claimed or completed the job.
+            current_job = self._repository.get_by_id(job_id)
+
+            if current_job is None:
+                raise JobNotFoundError(str(job_id))
+
+            return current_job
+
+        job = claimed_job
 
         try:
-            output = self._handler(self._storage.get(job.input_ref))
+            input_data = self._storage.get(job.input_ref)
+            output = self._handler(input_data)
+
             result_ref = f"jobs/{job.id}/result.json"
             self._storage.put(result_ref, output)
+
         except Exception as exc:
             job.status = JobStatus.FAILED
             job.error_message = str(exc) or type(exc).__name__
             self._repository.update(job)
             raise
 
-        # Khi chạy thành công:
         job.result_ref = result_ref
         job.status = JobStatus.COMPLETED
+        job.error_message = None
         self._repository.update(job)
+
         return job

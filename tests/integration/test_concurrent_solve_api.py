@@ -1,7 +1,9 @@
 import json
 from concurrent.futures import ThreadPoolExecutor
+from typing import TypedDict
 from uuid import UUID
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import delete
 
@@ -15,6 +17,11 @@ from timetable.interfaces.api.main import app
 from timetable.interfaces.api.schemas.solve import SolveRequest
 
 
+class SolveResponse(TypedDict):
+    job_id: str
+    status: str
+
+
 class FakeDispatcher:
     """Prevent integration tests from enqueueing real worker jobs."""
 
@@ -22,7 +29,13 @@ class FakeDispatcher:
         pass
 
 
-def test_concurrent_solve_requests_persist_independent_jobs() -> None:
+def test_concurrent_solve_requests_persist_independent_jobs(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Concurrent API requests correctly persist independent jobs using Postgres."""
+    api_key = "test-api-key"
+    monkeypatch.setenv("API_KEY", api_key)
+
     storage = PostgresStorage()
     repository = JobRepository()
 
@@ -63,10 +76,23 @@ def test_concurrent_solve_requests_persist_independent_jobs() -> None:
 
     try:
 
-        def submit(payload: dict[str, object]) -> tuple[int, dict]:
+        def submit(
+            payload: dict[str, object],
+        ) -> tuple[int, SolveResponse]:
             with TestClient(app) as client:
-                response = client.post("/solve", json=payload)
-                return response.status_code, response.json()
+                response = client.post(
+                    "/solve",
+                    json=payload,
+                    headers={"X-API-Key": api_key},
+                )
+                body = response.json()
+
+                if response.status_code == 202:
+                    assert isinstance(body, dict)
+                    assert isinstance(body.get("job_id"), str)
+                    assert isinstance(body.get("status"), str)
+
+                return response.status_code, body
 
         with ThreadPoolExecutor(max_workers=5) as executor:
             responses = list(executor.map(submit, payloads))
