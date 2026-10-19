@@ -2,8 +2,8 @@ import zipfile
 from pathlib import Path
 from typing import Any
 
-from openpyxl import load_workbook  # type: ignore[import-untyped]
-from openpyxl.utils.exceptions import InvalidFileException  # type: ignore[import-untyped]
+from openpyxl import load_workbook
+from openpyxl.utils.exceptions import InvalidFileException
 
 from timetable.application.ports.excel_importer import ExcelImportError
 from timetable.domain.entities import Problem
@@ -48,7 +48,7 @@ def _read_sheet(
     for number, values in enumerate(rows, start=2):
         record = {n: _clean(v) for n, v in zip(names, values, strict=False) if n in known}
         if all(v is None for v in record.values()):
-            continue  # dòng trống
+            continue
         empty = [c for c in required if record.get(c) is None]
         if empty:
             errors.append(f"Sheet {sheet}, dòng {number}: thiếu giá trị {', '.join(empty)}.")

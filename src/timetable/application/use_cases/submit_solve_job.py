@@ -1,4 +1,5 @@
 import json
+import logging
 from dataclasses import dataclass
 from uuid import UUID, uuid4
 
@@ -6,6 +7,8 @@ from timetable.application.ports.job_dispatcher import JobDispatcherPort
 from timetable.application.ports.storage import StoragePort
 from timetable.domain.entities.job import Job, JobStatus
 from timetable.domain.ports.job_repository import JobRepositoryPort
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True, slots=True)
@@ -45,11 +48,20 @@ class SubmitSolveJob:
         try:
             self._repository.save(job)
         except Exception:
-            # Avoid leaving an orphaned input file if job persistence fails.
+            # Remove the input file if the job could not be persisted.
             self._storage.delete(input_ref)
             raise
 
-        self._dispatcher.dispatch(str(job_id))
+        try:
+            self._dispatcher.dispatch(str(job_id))
+        except Exception:
+            # The dispatch result may be ambiguous: Redis might have received
+            # the message before the connection failed. Keep the job queued
+            # so reconciliation can retry without creating a replacement job.
+            logger.exception(
+                "Dispatch failed for job %s; keeping it queued for reconciliation",
+                job_id,
+            )
 
         return SubmitSolveJobResult(
             job_id=job_id,

@@ -36,6 +36,7 @@ dev = [
     "pytest>=9.1.1",
     "pytest-cov>=6.0",
     "ruff>=0.17.00",
+    "types-openpyxl>=3.1.5.20261017",
 ]
 
 [tool.ruff]
@@ -48,6 +49,22 @@ select = ["E", "F", "I", "UP", "B"]
 [tool.mypy]
 strict = true
 files = ["src"]
+
+[[tool.mypy.overrides]]
+module = [
+    "tests.*",
+    "test_diagnose_use_case",
+    "test_unsat_core",
+    "helpers",
+    "test_soft_constraints",
+    "test_solve_timetable",
+    "test_blocks",
+    "test_solver_handler",
+    "test_solve_handler",
+    "scripts.*",
+]
+disallow_untyped_defs = false
+disallow_untyped_calls = false
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -48,6 +48,7 @@ services:
     ports:
       - "8000:8000"
     environment:
+      API_KEY: ${API_KEY:?Set API_KEY in your environment}
       DATABASE_URL: postgresql+psycopg://timetable:timetable_dev@postgres:5432/timetable
       STORAGE_DIR: /app/data/storage
       REDIS_URL: redis://redis:6379/0

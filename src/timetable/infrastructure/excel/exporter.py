@@ -2,9 +2,9 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
-from openpyxl import Workbook  # type: ignore[import-untyped]
-from openpyxl.styles import Alignment, Font, PatternFill  # type: ignore[import-untyped]
-from openpyxl.utils import get_column_letter  # type: ignore[import-untyped]
+from openpyxl import Workbook
+from openpyxl.styles import Alignment, Font, PatternFill
+from openpyxl.utils import get_column_letter
 
 from timetable.application.ports.excel_exporter import ExcelExportError
 from timetable.domain.entities import Problem, Timetable
@@ -47,7 +47,7 @@ def _write_sheet(
                 lines = cells.get(owner_id, {}).get((day, period), [])
                 ws.cell(row=row, column=day + 2, value="\n".join(lines) or None).alignment = wrap
             row += 1
-        row += 1  # dòng trống giữa các khối
+        row += 1
     ws.column_dimensions["A"].width = 8
     for day in range(days):
         ws.column_dimensions[get_column_letter(day + 2)].width = 26
@@ -86,7 +86,10 @@ class OpenpyxlExcelExporter:
                 by_room[a.room_id][key].append(f"{subject}\n{class_name} - {teacher_name}")
 
         wb = Workbook()
-        wb.remove(wb.active)
+        active_sheet = wb.active
+        if active_sheet is not None:
+            wb.remove(active_sheet)
+
         _write_sheet(
             wb, SHEET_BY_CLASS, [(c.id, c.name) for c in problem.class_groups], by_class, problem
         )

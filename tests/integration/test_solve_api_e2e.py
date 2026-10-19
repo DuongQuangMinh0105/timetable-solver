@@ -10,7 +10,6 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import delete
 
-from conftest import SAMPLE_PATH
 from timetable.application.use_cases.submit_solve_job import SubmitSolveJob
 from timetable.domain.entities.job import JobStatus
 from timetable.infrastructure.dispatch.redis import RedisJobDispatcher
@@ -21,6 +20,9 @@ from timetable.infrastructure.storage.local import LocalStorage
 from timetable.infrastructure.storage.postgres import PostgresStorage
 from timetable.interfaces.api.dependencies import get_submit_solve_job
 from timetable.interfaces.api.main import app
+
+# Định nghĩa SAMPLE_PATH ở cấp độ module (đúng chuẩn và tránh lỗi type/used-before-def)
+SAMPLE_PATH = Path(__file__).resolve().parents[2] / "docs" / "schema" / "input.sample.json"
 
 
 def test_container_storage_follows_storage_dir_env(
@@ -47,7 +49,9 @@ def _run_redis_worker_e2e(
 ) -> None:
     """Submit a solve job through Redis and wait for a real worker to finish."""
     queue_name = f"timetable:test:{uuid4()}"
+    api_key = "test-api-key"
     monkeypatch.setenv("STORAGE_BACKEND", storage_backend)
+    monkeypatch.setenv("API_KEY", api_key)
 
     worker_env = os.environ.copy()
     worker_env["QUEUE_NAME"] = queue_name
@@ -78,10 +82,21 @@ def _run_redis_worker_e2e(
             stderr=subprocess.DEVNULL,
         )
 
-        response = TestClient(app).post("/solve", json=payload)
+        with TestClient(app) as client:
+            response = client.post(
+                "/solve",
+                json=payload,
+                headers={"X-API-Key": api_key},
+            )
+
         assert response.status_code == 202, response.text
 
-        job_id = UUID(response.json()["job_id"])
+        response_body = response.json()
+        assert isinstance(response_body, dict)
+        response_job_id = response_body.get("job_id")
+        assert isinstance(response_job_id, str)
+        job_id = UUID(response_job_id)
+
         deadline = time.monotonic() + 60
         job = None
 
@@ -107,11 +122,22 @@ def _run_redis_worker_e2e(
 
         storage_keys = [job.input_ref, job.result_ref]
         result_bytes = storage.get(job.result_ref)
-        result = json.loads(result_bytes)
+        result: object = json.loads(result_bytes)
 
-        assert result["status"] in {"OPTIMAL", "FEASIBLE"}
-        assert result["violations"] == []
-        assert len(result["assignments"]) == len(payload["lesson_units"])
+        assert isinstance(result, dict)
+
+        status = result.get("status")
+        violations = result.get("violations")
+        assignments = result.get("assignments")
+        lesson_units = payload.get("lesson_units")
+
+        assert isinstance(status, str)
+        assert status in {"OPTIMAL", "FEASIBLE"}
+        assert isinstance(violations, list)
+        assert violations == []
+        assert isinstance(assignments, list)
+        assert isinstance(lesson_units, list)
+        assert len(assignments) == len(lesson_units)
 
     finally:
         app.dependency_overrides.pop(get_submit_solve_job, None)
@@ -138,6 +164,8 @@ def test_post_solve_runs_redis_worker_and_completes_job(
 ) -> None:
     """The API dispatches a job through Redis to a separate worker."""
     payload = json.loads(SAMPLE_PATH.read_text(encoding="utf-8"))
+    assert isinstance(payload, dict)
+
     payload["solver"] = {
         "time_limit_s": 30,
         "num_workers": 1,
@@ -160,6 +188,8 @@ def test_post_solve_with_postgres_storage_backend(
     monkeypatch.setenv("SOLVER_MAX_WORKERS", "1")
 
     payload = json.loads(SAMPLE_PATH.read_text(encoding="utf-8"))
+    assert isinstance(payload, dict)
+
     payload["solver"] = {
         "time_limit_s": 30,
         "num_workers": 1,
