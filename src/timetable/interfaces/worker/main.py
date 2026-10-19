@@ -107,10 +107,14 @@ def main() -> None:
             if item is None:
                 continue
 
-            _, raw_job_id = item  # str nhờ decode_responses=True
+            _, raw_job_id = item
 
             try:
+                if isinstance(raw_job_id, bytes):
+                    raw_job_id = raw_job_id.decode("utf-8")
+
                 job_id = UUID(raw_job_id)
+                # Gọi use case để thực thi job thực tế và nhận lại đối tượng job
                 job = use_case.execute(job_id)
                 logger.info(
                     "Job %s finished with status %s",
