@@ -1,6 +1,9 @@
 import logging
 import os
+import signal
+import threading
 import time
+from typing import Any
 from uuid import UUID
 
 from redis import Redis
@@ -27,6 +30,13 @@ QUEUE_WAIT_SECONDS = 5
 RECONCILE_INTERVAL_SECONDS = 30
 RECONCILE_BATCH_SIZE = 100
 
+_shutdown = threading.Event()
+
+
+def _handle_signal(signum: int, _frame: Any) -> None:
+    logger.info("Received signal %s, shutting down after current job…", signum)
+    _shutdown.set()
+
 
 def build_use_case() -> RunJob:
     """Build RunJob with repository, configured storage and real solver."""
@@ -50,6 +60,9 @@ def build_reconciler() -> ReconcileQueuedJobs:
 
 
 def main() -> None:
+    signal.signal(signal.SIGTERM, _handle_signal)
+    signal.signal(signal.SIGINT, _handle_signal)
+
     redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
     redis_client = Redis.from_url(
         redis_url,
@@ -64,7 +77,7 @@ def main() -> None:
     logger.info("Worker started. Waiting for jobs on queue %s", QUEUE_NAME)
 
     try:
-        while True:
+        while not _shutdown.is_set():
             now = time.monotonic()
 
             if now >= next_reconcile_at:
@@ -94,12 +107,9 @@ def main() -> None:
             if item is None:
                 continue
 
-            _, raw_job_id = item
+            _, raw_job_id = item  # str nhờ decode_responses=True
 
             try:
-                if isinstance(raw_job_id, bytes):
-                    raw_job_id = raw_job_id.decode("utf-8")
-
                 job_id = UUID(raw_job_id)
                 job = use_case.execute(job_id)
                 logger.info(
@@ -111,6 +121,7 @@ def main() -> None:
                 logger.exception("Failed to process job %s", raw_job_id)
     finally:
         redis_client.close()
+        logger.info("Worker stopped.")
 
 
 if __name__ == "__main__":
