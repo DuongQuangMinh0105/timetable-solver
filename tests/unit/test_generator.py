@@ -192,9 +192,12 @@ def _periods_needing(data: dict[str, Any], room_type: str) -> int:
     )
 
 
+
 def _week_capacity(data: dict[str, Any]) -> int:
     grid = data["grid"]
-    return grid["days"] * len(grid["allowed_periods"])
+    days = int(grid["days"])
+    allowed_periods = grid["allowed_periods"]
+    return days * len(allowed_periods)
 
 
 def test_profile_matches_its_parameters() -> None:

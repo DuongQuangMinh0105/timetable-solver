@@ -1,4 +1,6 @@
+
 from dataclasses import dataclass
+from datetime import datetime
 from enum import StrEnum
 from uuid import UUID
 
@@ -17,3 +19,5 @@ class Job:
     input_ref: str
     result_ref: str | None = None
     error_message: str | None = None
+    started_at: datetime | None = None
+    heartbeat_at: datetime | None = None
