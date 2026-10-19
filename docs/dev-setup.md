@@ -29,8 +29,13 @@ uv run alembic upgrade head
 uv run ruff check .
 uv run ruff format --check .
 uv run mypy
-uv run pytest
+uv run pytest --cov
 ```
+
+`--cov` in độ phủ test theo từng file và báo lỗi nếu tổng dưới ngưỡng `fail_under` trong `pyproject.toml`
+(hiện 90%; đo đầy đủ khi có Postgres và Redis được đo khoảng 97%). Test `tests/integration/test_solve_api_e2e.py`
+cần thêm Redis (`docker compose up -d redis`, `REDIS_URL` mặc định `redis://localhost:6379/0`).
+Không hạ ngưỡng để cho CI qua: hãy thêm test.
 
 Xong thì dọn: `Remove-Item Env:DATABASE_URL` và `docker compose down`.
 

@@ -20,6 +20,14 @@ class SolveOptions:
 
 
 @dataclass(frozen=True, slots=True)
+class SolveStats:
+    wall_time_s: float = 0.0
+    num_conflicts: int = 0
+    num_branches: int = 0
+    num_booleans: int = 0
+
+
+@dataclass(frozen=True, slots=True)
 class SolveResult:
     status: SolveStatus
     timetable: Timetable | None = None
@@ -29,3 +37,4 @@ class SolveResult:
     # Giá trị từng số hạng của hàm mục tiêu (room, sat, g316...), nếu có.
     cost_terms: dict[str, int] = field(default_factory=dict)
     # SolveStats sẽ được P2 bổ sung sau.
+    stats: SolveStats = field(default_factory=SolveStats)

@@ -85,6 +85,19 @@ Ngoại lệ đã ghi nhận:
   `application/ports/`. Giữ nguyên vì hợp lệ về phụ thuộc (domain không import tầng ngoài). Khi thêm
   port mới, ưu tiên đặt ở `application/ports/`.
 
+## Kiểm tra lịch: dùng module nào
+
+Repo có bốn chỗ kiểm tra lịch, mỗi chỗ phục vụ một việc:
+
+| Module | Dùng để | Ghi chú |
+|---|---|---|
+| `domain/services/timetable_checker.py` (`check_timetable`) | Bộ kiểm tra độc lập sau khi giải, dùng trong `SolveTimetable` và worker. Lịch vi phạm cứng thì job `FAILED`, không lưu kết quả | Làm việc trên `Problem` + `Timetable` |
+| `domain/validator.py` (`Validator`) | Validator tổng quát của P5, nhận lịch dạng dict hoặc entity, `validate(timetable, problem=None)` | Chữ ký này có test, không đổi thứ tự tham số |
+| `domain/services/validation_report.py` (`build_report`) | Báo cáo vi phạm cứng và mềm kèm tóm tắt cho E2E Excel | Của P5 (task 10) |
+| `domain/validation_report.py` (`validate_soft`, `summarize_validation`) | Tính điểm phạt mềm từ `reference_cost`, dùng trong `scripts/run_e2e_soft_check.py` | Của P2. Trùng tên với module ở dòng trên, nên gộp hoặc đổi tên khi dọn code |
+
+Khi thêm việc kiểm tra mới, mở rộng module sẵn có thay vì tạo bản thứ tư.
+
 ## Quy ước
 - Thư mục `tests/` không có `__init__.py`: mỗi module test và helper phải có tên duy nhất
   (ví dụ `solver_helpers.py`), nếu không pytest báo trùng tên module.

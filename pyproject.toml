@@ -34,6 +34,7 @@ dev = [
     "mypy>=2.4.0",
     "pre-commit>=4.6.2",
     "pytest>=9.1.1",
+    "pytest-cov>=6.0",
     "ruff>=0.17.00",
     "types-openpyxl>=3.1.5.20261017",
 ]
@@ -68,3 +69,13 @@ disallow_untyped_calls = false
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
+
+[tool.coverage.run]
+source = ["src/timetable"]
+branch = false
+
+[tool.coverage.report]
+# Ngưỡng tối thiểu của CI. Nâng dần khi có thêm test, không hạ xuống.
+fail_under = 90
+show_missing = true
+skip_covered = true
