@@ -6,6 +6,7 @@ from timetable.domain.entities.lesson_unit import LessonUnit
 from timetable.domain.entities.room import Room
 from timetable.domain.entities.teacher import Teacher
 from timetable.domain.entities.time_grid import TimeGrid
+from timetable.domain.rules.soft_constraints import W_G316, W_ROOM, W_SAT
 
 
 @dataclass(frozen=True, slots=True)
@@ -18,9 +19,8 @@ class Problem:
     courses: tuple[Course, ...]
     lesson_units: tuple[LessonUnit, ...]
     grid: TimeGrid = field(default_factory=TimeGrid)
-    # Một lớp không học liên tiếp quá số tiết này (tính theo số thứ tự tiết, không xét nghỉ trưa).
     max_consecutive_periods: int = 2
-    # Tiết bắt đầu cho phép của block từ 2 tiết trở lên (đánh số từ 0).
-    # None: bắt đầu ở tiết nào cũng được miễn mọi tiết bị chiếm đều hợp lệ.
-    # Ví dụ (0, 2, 4): chỉ block căn cặp 1-2, 3-4, 5-6.
     block_starts: tuple[int, ...] | None = None
+
+    # THÊM DÒNG NÀY: Trọng số cho các ràng buộc mềm (room stability, tránh T7, ưu tiên G316)
+    soft_weights: tuple[int, int, int] = (W_ROOM, W_SAT, W_G316)
