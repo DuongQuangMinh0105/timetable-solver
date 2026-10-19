@@ -1,7 +1,7 @@
 """Mini mutation tester for soft_constraints.py (works on Windows, no mutmut).
 
 Usage (from the repo root):
-    python mutate.py <path to soft_constraints.py>
+    python scripts/mutate.py src/timetable/domain/rules/soft_constraints.py
 
 Each mutant edits ONE spot, runs the unit tests, then restores the file.
 KILLED   = tests failed  (good: tests caught the bug)
