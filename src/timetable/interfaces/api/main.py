@@ -1,11 +1,16 @@
-from typing import Annotated
+from typing import Annotated, Any
 from uuid import UUID
 
 from fastapi import Depends, FastAPI, HTTPException, Security, status
 
 from timetable.application.use_cases.get_job import GetJob, JobNotFoundError
+from timetable.application.use_cases.get_job_result import GetJobResult, ResultNotReadyError
 from timetable.application.use_cases.submit_solve_job import SubmitSolveJob
-from timetable.interfaces.api.dependencies import get_get_job, get_submit_solve_job
+from timetable.interfaces.api.dependencies import (
+    get_get_job,
+    get_get_job_result,
+    get_submit_solve_job,
+)
 from timetable.interfaces.api.schemas.job_response import JobResponse
 from timetable.interfaces.api.schemas.solve import SolveRequest
 from timetable.interfaces.api.schemas.solve_response import SolveAcceptedResponse
@@ -129,3 +134,30 @@ def get_job(
         status=api_status,
         result_ref=job.result_ref,
     )
+
+
+@app.get(
+    "/jobs/{job_id}/result",
+    tags=["Jobs"],
+    summary="Get job result",
+    description="Return the result.json of a finished job (status, assignments, violations).",
+    dependencies=[Security(verify_api_key)],
+    responses={
+        401: {"description": "API key is missing or invalid"},
+        404: {"description": "Job not found"},
+        409: {"description": "Result is not ready"},
+    },
+)
+def get_job_result(
+    job_id: UUID,
+    use_case: Annotated[GetJobResult, Depends(get_get_job_result)],
+) -> dict[str, Any]:
+    """Return the result of a finished job."""
+    try:
+        return use_case.execute(job_id)
+    except JobNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found") from exc
+    except ResultNotReadyError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="Result is not ready"
+        ) from exc
