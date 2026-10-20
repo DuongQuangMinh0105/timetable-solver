@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Protocol
 from uuid import UUID
 
@@ -5,7 +6,7 @@ from timetable.domain.entities.job import Job
 
 
 class JobRepositoryPort(Protocol):
-    """Contract for persisting and claiming jobs."""
+    """Contract for persisting, claiming and monitoring jobs."""
 
     def save(self, job: Job) -> None:
         """Persist a job."""
@@ -24,4 +25,22 @@ class JobRepositoryPort(Protocol):
         limit: int = 100,
         after_id: UUID | None = None,
     ) -> list[Job]:
-        """Return a bounded page of queued jobs after the given UUID."""
+        """Return a bounded page of queued jobs."""
+
+    def touch_heartbeat(self, job_id: UUID) -> bool:
+        """Update heartbeat only while the job is running."""
+
+    def list_stale_running_jobs(
+        self,
+        cutoff: datetime,
+        limit: int = 100,
+    ) -> list[Job]:
+        """List running jobs whose heartbeat is older than cutoff."""
+
+    def fail_stale_running_job(
+        self,
+        job_id: UUID,
+        cutoff: datetime,
+        error_message: str,
+    ) -> bool:
+        """Atomically fail a still-stale running job."""

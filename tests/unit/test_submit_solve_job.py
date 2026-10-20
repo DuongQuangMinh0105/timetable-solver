@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from uuid import UUID
 
 import pytest
@@ -69,6 +70,57 @@ class FakeRepository:
         )
         return queued_jobs[:limit]
 
+    def touch_heartbeat(self, job_id: UUID) -> bool:
+        job = self.get_by_id(job_id)
+
+        if job is None or job.status is not JobStatus.RUNNING:
+            return False
+
+        job.heartbeat_at = datetime.now(UTC)
+        return True
+
+    def list_stale_running_jobs(
+        self,
+        cutoff: datetime,
+        limit: int = 100,
+    ) -> list[Job]:
+        if limit < 1:
+            raise ValueError("limit must be greater than zero.")
+
+        stale_jobs = [
+            job
+            for job in self.jobs
+            if job.status is JobStatus.RUNNING
+            and job.heartbeat_at is not None
+            and job.heartbeat_at < cutoff
+        ]
+
+        return sorted(
+            stale_jobs,
+            key=lambda job: (job.heartbeat_at, job.id),
+        )[:limit]
+
+    def fail_stale_running_job(
+        self,
+        job_id: UUID,
+        cutoff: datetime,
+        error_message: str,
+    ) -> bool:
+        job = self.get_by_id(job_id)
+
+        if (
+            job is None
+            or job.status is not JobStatus.RUNNING
+            or job.heartbeat_at is None
+            or job.heartbeat_at >= cutoff
+        ):
+            return False
+
+        job.status = JobStatus.FAILED
+        job.error_message = error_message
+        self.update(job)
+        return True
+
 
 class FailingRepository:
     def save(self, job: Job) -> None:
@@ -91,6 +143,26 @@ class FailingRepository:
         if limit < 1:
             raise ValueError("limit must be greater than zero.")
         return []
+
+    def touch_heartbeat(self, job_id: UUID) -> bool:
+        return False
+
+    def list_stale_running_jobs(
+        self,
+        cutoff: datetime,
+        limit: int = 100,
+    ) -> list[Job]:
+        if limit < 1:
+            raise ValueError("limit must be greater than zero.")
+        return []
+
+    def fail_stale_running_job(
+        self,
+        job_id: UUID,
+        cutoff: datetime,
+        error_message: str,
+    ) -> bool:
+        return False
 
 
 class RecordingDispatcher:
