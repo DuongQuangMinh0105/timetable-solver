@@ -16,11 +16,11 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-# Ép Python sử dụng UTF-8 khi in ra console trên Windows để tránh lỗi UnicodeEncodeError
-if sys.stdout.encoding != "utf-8":
-    sys.stdout.reconfigure(encoding="utf-8")
-if sys.stderr.encoding != "utf-8":
-    sys.stderr.reconfigure(encoding="utf-8")
+# Ép UTF-8 nếu stream hiện tại hỗ trợ reconfigure (ví dụ console Windows).
+for stream in (sys.stdout, sys.stderr):
+    reconfigure = getattr(stream, "reconfigure", None)
+    if callable(reconfigure) and stream.encoding != "utf-8":
+        reconfigure(encoding="utf-8")
 
 DEFAULT_INPUT = Path(__file__).resolve().parents[1] / "docs" / "schema" / "input.sample.json"
 SUCCESS_STATUSES = {"DONE", "COMPLETED"}
@@ -33,10 +33,11 @@ class SmokeTestError(Exception):
 
 
 def request(method: str, url: str, body: bytes | None = None) -> tuple[int, str]:
-    """Gửi một request, trả về (mã trạng thái, nội dung). Lỗi mạng thì ném SmokeTestError."""
+    """Gửi request, trả về (mã trạng thái, nội dung)."""
     req = urllib.request.Request(url, data=body, method=method)
     if body is not None:
         req.add_header("Content-Type", "application/json")
+
     try:
         with urllib.request.urlopen(req, timeout=60) as response:
             return response.status, response.read().decode("utf-8", errors="replace")
@@ -47,9 +48,10 @@ def request(method: str, url: str, body: bytes | None = None) -> tuple[int, str]
 
 
 def wait_until_healthy(base_url: str, wake_timeout: float, poll: float) -> float:
-    """Gọi /health cho tới khi trả lời. Dịch vụ miễn phí có thể đang ngủ nên cho phép chờ."""
+    """Gọi /health cho tới khi dịch vụ phản hồi."""
     start = time.monotonic()
     last_error = "chưa có phản hồi"
+
     while time.monotonic() - start < wake_timeout:
         try:
             status, text = request("GET", f"{base_url}/health")
@@ -58,7 +60,9 @@ def wait_until_healthy(base_url: str, wake_timeout: float, poll: float) -> float
             last_error = f"HTTP {status}: {text[:200]}"
         except SmokeTestError as error:
             last_error = str(error)
+
         time.sleep(poll)
+
     raise SmokeTestError(f"/health không sẵn sàng sau {wake_timeout:.0f}s ({last_error})")
 
 
@@ -66,35 +70,48 @@ def submit_job(base_url: str, payload: bytes) -> str:
     status, text = request("POST", f"{base_url}/solve", payload)
     if not 200 <= status < 300:
         raise SmokeTestError(f"POST /solve trả HTTP {status}: {text[:300]}")
+
     try:
         job_id = json.loads(text)["job_id"]
     except (ValueError, KeyError, TypeError) as error:
         raise SmokeTestError(f"POST /solve không trả job_id: {text[:300]}") from error
+
     return str(job_id)
 
 
 def wait_for_job(base_url: str, job_id: str, timeout: float, poll: float) -> str:
     start = time.monotonic()
     last_status = ""
+
     while time.monotonic() - start < timeout:
         status, text = request("GET", f"{base_url}/jobs/{job_id}")
         if status != 200:
             raise SmokeTestError(f"GET /jobs/{job_id} trả HTTP {status}: {text[:300]}")
+
         job_status = str(json.loads(text).get("status", "")).upper()
         if job_status != last_status:
             print(f"  [{time.monotonic() - start:5.1f}s] job {job_status}")
             last_status = job_status
+
         if job_status in SUCCESS_STATUSES:
             return job_status
         if job_status in FAILURE_STATUSES:
             raise SmokeTestError(f"job {job_id} kết thúc với trạng thái {job_status}")
+
         time.sleep(poll)
+
     raise SmokeTestError(
         f"job {job_id} chưa xong sau {timeout:.0f}s (trạng thái cuối: {last_status})"
     )
 
 
-def run(base_url: str, input_path: Path, wake_timeout: float, timeout: float, poll: float) -> None:
+def run(
+    base_url: str,
+    input_path: Path,
+    wake_timeout: float,
+    timeout: float,
+    poll: float,
+) -> None:
     base_url = base_url.rstrip("/")
     print(f"Smoke test: {base_url}")
 
@@ -112,27 +129,45 @@ def run(base_url: str, input_path: Path, wake_timeout: float, timeout: float, po
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description=__doc__, formatter_class=argparse.RawTextHelpFormatter
+        description=__doc__,
+        formatter_class=argparse.RawTextHelpFormatter,
     )
     parser.add_argument(
-        "base_url", help="Địa chỉ dịch vụ, ví dụ https://timetable-solver.onrender.com"
-    )
-    parser.add_argument("--input", type=Path, default=DEFAULT_INPUT, help="File input JSON gửi lên")
-    parser.add_argument(
-        "--wake-timeout", type=float, default=120, help="Giây chờ /health (mặc định 120)"
+        "base_url",
+        help="Địa chỉ dịch vụ, ví dụ https://timetable-solver.onrender.com",
     )
     parser.add_argument(
-        "--timeout", type=float, default=300, help="Giây chờ job xong (mặc định 300)"
+        "--input",
+        type=Path,
+        default=DEFAULT_INPUT,
+        help="File input JSON gửi lên",
     )
     parser.add_argument(
-        "--poll", type=float, default=DEFAULT_POLL_SECONDS, help="Giây giữa các lần hỏi"
+        "--wake-timeout",
+        type=float,
+        default=120,
+        help="Giây chờ /health (mặc định 120)",
+    )
+    parser.add_argument(
+        "--timeout",
+        type=float,
+        default=300,
+        help="Giây chờ job xong (mặc định 300)",
+    )
+    parser.add_argument(
+        "--poll",
+        type=float,
+        default=DEFAULT_POLL_SECONDS,
+        help="Giây giữa các lần hỏi",
     )
     args = parser.parse_args()
+
     try:
         run(args.base_url, args.input, args.wake_timeout, args.timeout, args.poll)
     except SmokeTestError as error:
         print(f"SMOKE TEST THẤT BẠI: {error}", file=sys.stderr)
         return 1
+
     return 0
 
 
