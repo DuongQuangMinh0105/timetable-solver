@@ -1,4 +1,3 @@
-
 """Smoke test cho staging: kiểm tra /health, gửi bài toán mẫu qua POST /solve, chờ job xong.
 
 Dùng:
@@ -23,9 +22,7 @@ for stream in (sys.stdout, sys.stderr):
     if callable(reconfigure) and stream.encoding != "utf-8":
         reconfigure(encoding="utf-8")
 
-DEFAULT_INPUT = (
-    Path(__file__).resolve().parents[1] / "docs" / "schema" / "input.sample.json"
-)
+DEFAULT_INPUT = Path(__file__).resolve().parents[1] / "docs" / "schema" / "input.sample.json"
 SUCCESS_STATUSES = {"DONE", "COMPLETED"}
 FAILURE_STATUSES = {"FAILED", "ERROR"}
 DEFAULT_POLL_SECONDS = 5
@@ -43,9 +40,7 @@ def request(method: str, url: str, body: bytes | None = None) -> tuple[int, str]
 
     try:
         with urllib.request.urlopen(req, timeout=60) as response:
-            return response.status, response.read().decode(
-                "utf-8", errors="replace"
-            )
+            return response.status, response.read().decode("utf-8", errors="replace")
     except urllib.error.HTTPError as error:
         return error.code, error.read().decode("utf-8", errors="replace")
     except (urllib.error.URLError, TimeoutError, ConnectionError) as error:
@@ -68,9 +63,7 @@ def wait_until_healthy(base_url: str, wake_timeout: float, poll: float) -> float
 
         time.sleep(poll)
 
-    raise SmokeTestError(
-        f"/health không sẵn sàng sau {wake_timeout:.0f}s ({last_error})"
-    )
+    raise SmokeTestError(f"/health không sẵn sàng sau {wake_timeout:.0f}s ({last_error})")
 
 
 def submit_job(base_url: str, payload: bytes) -> str:
@@ -81,9 +74,7 @@ def submit_job(base_url: str, payload: bytes) -> str:
     try:
         job_id = json.loads(text)["job_id"]
     except (ValueError, KeyError, TypeError) as error:
-        raise SmokeTestError(
-            f"POST /solve không trả job_id: {text[:300]}"
-        ) from error
+        raise SmokeTestError(f"POST /solve không trả job_id: {text[:300]}") from error
 
     return str(job_id)
 
@@ -95,9 +86,7 @@ def wait_for_job(base_url: str, job_id: str, timeout: float, poll: float) -> str
     while time.monotonic() - start < timeout:
         status, text = request("GET", f"{base_url}/jobs/{job_id}")
         if status != 200:
-            raise SmokeTestError(
-                f"GET /jobs/{job_id} trả HTTP {status}: {text[:300]}"
-            )
+            raise SmokeTestError(f"GET /jobs/{job_id} trả HTTP {status}: {text[:300]}")
 
         job_status = str(json.loads(text).get("status", "")).upper()
         if job_status != last_status:
@@ -107,15 +96,12 @@ def wait_for_job(base_url: str, job_id: str, timeout: float, poll: float) -> str
         if job_status in SUCCESS_STATUSES:
             return job_status
         if job_status in FAILURE_STATUSES:
-            raise SmokeTestError(
-                f"job {job_id} kết thúc với trạng thái {job_status}"
-            )
+            raise SmokeTestError(f"job {job_id} kết thúc với trạng thái {job_status}")
 
         time.sleep(poll)
 
     raise SmokeTestError(
-        f"job {job_id} chưa xong sau {timeout:.0f}s "
-        f"(trạng thái cuối: {last_status})"
+        f"job {job_id} chưa xong sau {timeout:.0f}s (trạng thái cuối: {last_status})"
     )
 
 

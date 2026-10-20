@@ -192,7 +192,6 @@ def _periods_needing(data: dict[str, Any], room_type: str) -> int:
     )
 
 
-
 def _week_capacity(data: dict[str, Any]) -> int:
     grid = data["grid"]
     days = int(grid["days"])

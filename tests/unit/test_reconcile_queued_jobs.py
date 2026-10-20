@@ -1,4 +1,3 @@
-
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
@@ -56,8 +55,7 @@ class FakeRepository:
         queued_jobs = [
             job
             for job in self.jobs
-            if job.status is JobStatus.QUEUED
-            and (after_id is None or job.id > after_id)
+            if job.status is JobStatus.QUEUED and (after_id is None or job.id > after_id)
         ]
         return queued_jobs[:limit]
 

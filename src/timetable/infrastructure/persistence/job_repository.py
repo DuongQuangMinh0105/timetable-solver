@@ -1,4 +1,3 @@
-
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -90,9 +89,7 @@ class JobRepository(JobRepositoryPort):
             raise ValueError("limit must be greater than zero.")
 
         with self._session_factory() as session:
-            statement = select(JobModel).where(
-                JobModel.status == JobStatus.QUEUED.value
-            )
+            statement = select(JobModel).where(JobModel.status == JobStatus.QUEUED.value)
 
             if after_id is not None:
                 statement = statement.where(JobModel.id > after_id)

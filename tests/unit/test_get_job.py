@@ -1,4 +1,3 @@
-
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
@@ -43,8 +42,7 @@ class _Repository:
             (
                 job
                 for job in self._jobs.values()
-                if job.status is JobStatus.QUEUED
-                and (after_id is None or job.id > after_id)
+                if job.status is JobStatus.QUEUED and (after_id is None or job.id > after_id)
             ),
             key=lambda job: job.id,
         )

@@ -1,4 +1,3 @@
-
 """E2E: Import -> Solve -> Export (giả lập) -> Validator. Kiểm tra điểm phạt khớp."""
 
 import json
@@ -40,19 +39,11 @@ def run_check(profile_name: str, seed: int = 0) -> None:
         (room.id for room in problem.rooms if room.room_type == "mba"),
         "G316",
     )
-    mba_courses = {
-        course.id
-        for course in problem.courses
-        if course.required_room_type == "mba"
-    }
+    mba_courses = {course.id for course in problem.courses if course.required_room_type == "mba"}
 
     objective_applier = SoftObjectiveApplier(
         add_soft_objective,
-        saturdays=(
-            (TimeGrid.SATURDAY,)
-            if problem.grid.days > TimeGrid.SATURDAY
-            else ()
-        ),
+        saturdays=((TimeGrid.SATURDAY,) if problem.grid.days > TimeGrid.SATURDAY else ()),
         mba_course_ids=mba_courses,
         mba_room_id=mba_room,
         weights=problem.soft_weights,
@@ -88,9 +79,7 @@ def run_check(profile_name: str, seed: int = 0) -> None:
         report_violations,
     )
 
-    solver_penalty = (
-        sum(result.cost_terms.values()) if result.cost_terms else 0
-    )
+    solver_penalty = sum(result.cost_terms.values()) if result.cost_terms else 0
 
     print(f"  Trạng thái Solver: {result.status}")
     print(f"  Mục tiêu (Objective): {result.objective}")
@@ -103,11 +92,7 @@ def run_check(profile_name: str, seed: int = 0) -> None:
     if summary.total_penalty == solver_penalty:
         print("  KẾT LUẬN: Điểm phạt KHỚP.")
     else:
-        print(
-            "  KẾT LUẬN: LỆCH! "
-            f"(Solver: {solver_penalty}, "
-            f"Validator: {summary.total_penalty})"
-        )
+        print(f"  KẾT LUẬN: LỆCH! (Solver: {solver_penalty}, Validator: {summary.total_penalty})")
         for violation in summary.soft_violations:
             print(f"    - {violation.rule_id}: {violation.description}")
 
