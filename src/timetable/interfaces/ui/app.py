@@ -2,8 +2,9 @@ import io
 import tempfile
 import time
 from pathlib import Path
+from typing import Any
 
-import pandas as pd
+import pandas as pd  # type: ignore[import-untyped]
 import streamlit as st
 
 from timetable.application.ports.excel_importer import ExcelImportError
@@ -17,7 +18,7 @@ st.set_page_config(
 )
 
 
-def export_schedule_to_excel(assignments: list[dict]) -> bytes:
+def export_schedule_to_excel(assignments: list[dict[str, Any]]) -> bytes:
     """Xuất danh sách phân công lịch học ra file Excel."""
     output = io.BytesIO()
     df = pd.DataFrame(assignments)
@@ -26,7 +27,7 @@ def export_schedule_to_excel(assignments: list[dict]) -> bytes:
     return output.getvalue()
 
 
-def render_dashboard(result_data: dict) -> None:
+def render_dashboard(result_data: dict[str, Any]) -> None:
     """Hiển thị các Tab giao diện sau khi giải thành công."""
     status = result_data.get("status", "UNKNOWN")
     objective = result_data.get("objective", 0)
