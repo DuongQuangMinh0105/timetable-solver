@@ -5,35 +5,48 @@ Dự án theo Clean Architecture: phụ thuộc chỉ đi từ ngoài vào trong
 
 ```mermaid
 flowchart LR
+    UI[Streamlit UI] -->|HTTP + X-API-Key| API
     subgraph interfaces
         API[api: FastAPI]
         WK[worker]
     end
     subgraph application
+        SJ[SubmitSolveJob]
+        GJ[GetJob / GetJobResult]
         RJ[RunJob]
+        RQ[ReconcileQueuedJobs]
         ST[SolveTimetable]
         DI[DiagnoseInfeasibility]
-        PS[ports: SolverPort, TimetableChecker,\nStoragePort, JobRepositoryPort]
+        XL[ImportExcel / ExportExcel]
+        PS[ports: SolverPort, TimetableChecker, StoragePort,\nJobRepositoryPort, JobDispatcherPort, Excel ports]
     end
     subgraph domain
-        EN[entities: Problem, LessonUnit,\nRoom, Timetable ...]
-        SV[services: unit_splitter, room_policy,\nslot_policy, timetable_checker, precheck]
-        VAL[validator + violation]
+        EN[entities: Problem, LessonUnit, Room, Timetable, Job]
+        SV[services: unit_splitter, room_policy, slot_policy,\nprecheck, timetable_checker]
+        VAL[validator, violation, constraint_config]
     end
     subgraph infrastructure
-        CP[solver: CpSatSolver, builder,\nhard_encoders, soft_adapter]
-        PL[problem_loader]
-        PG[persistence: Postgres]
-        ST2[storage: local]
+        CP[solver: CpSatSolver, builder, hard_encoders,\noptimization, soft_adapter, solve_handler]
+        DP[dispatch: redis, local]
+        PG[persistence: Postgres jobs]
+        SG[storage: local, postgres]
+        EX[excel: openpyxl]
+        PL[problem_loader, generator]
     end
-    API --> RJ
+    API --> SJ
+    API --> GJ
     WK --> RJ
+    WK --> RQ
+    SJ --> PS
     RJ --> PS
+    RQ --> PS
     ST --> PS
     ST --> VAL
     CP -.implements.-> PS
+    DP -.implements.-> PS
     PG -.implements.-> PS
-    ST2 -.implements.-> PS
+    SG -.implements.-> PS
+    EX -.implements.-> PS
     PL --> EN
     CP --> SV
 ```
@@ -55,11 +68,61 @@ flowchart LR
 5. Use case chạy `TimetableChecker` (mặc định `check_timetable`) và trả
    `SolveOutcome(result, violations)`; `outcome.ok` chỉ đúng khi có lịch và không vi phạm.
 
-## Chạy theo job (worker)
-`RunJob` đọc đầu vào từ storage, gọi một handler `bytes -> bytes`, ghi `result.json` và cập nhật
-trạng thái job trong Postgres. Handler hiện tại là solver giả (`infrastructure/solver/fake.py`);
-nối `SolveTimetable` vào worker là một thay đổi riêng, cần thống nhất định dạng `result.json`,
-cách đánh dấu job vô nghiệm và cấu hình CPU của container worker.
+## Chạy theo job (API, hàng đợi, worker)
+
+```
+Client ──POST /solve──▶ API ──▶ SubmitSolveJob: lưu input vào storage, tạo job QUEUED (Postgres)
+                                        │ dispatcher.dispatch(job_id)
+              ┌─────────────────────────┴───────────────────────────┐
+   JOB_DISPATCHER=redis                                   JOB_DISPATCHER=local
+   LPUSH job_id vào Redis (QUEUE_NAME)                    API chạy `python -m ...worker.main`
+   worker chạy vòng lặp BRPOP                             như tiến trình con, kèm JOB_ID=<id>
+              └─────────────────────────┬───────────────────────────┘
+                                        ▼
+        RunJob: QUEUED → RUNNING → handler (solve_handler) → ghi result.json → SUCCEEDED / FAILED
+Client ──GET /jobs/{id}, /jobs/{id}/result──▶ API (GetJob, GetJobResult)
+```
+
+- **Dispatcher** (`infrastructure/dispatch`): `redis` là mặc định, dùng khi có Redis và worker riêng
+  (docker compose). `local` dành cho nơi không có Redis (Render miễn phí): mỗi job là một tiến trình
+  con của API, chạy ở chế độ một job (`JOB_ID`, hàm `run_single_job`).
+- **Storage** (`STORAGE_BACKEND`): `local` (thư mục `STORAGE_DIR`) hoặc `postgres` (bảng `blobs`) khi
+  không có ổ đĩa bền. API và worker phải dùng cùng cấu hình.
+- **Handler** (`solve_handler.py`): đọc JSON, kiểm tra `constraint_config_version`, dựng
+  `build_default_solver`, giải, chạy `check_timetable`; lịch vi phạm cứng làm job `FAILED`.
+  Giới hạn tài nguyên bằng `SOLVER_MAX_WORKERS` và `SOLVER_MAX_TIME_S` (giá trị yêu cầu vượt mức này
+  bị cắt xuống).
+- **Heartbeat**: bảng job có cột `heartbeat_at` và repository có `touch_heartbeat`,
+  `list_stale_running_jobs`, `fail_stale_running_job`. **Hiện chưa có tiến trình nào gọi các hàm này**
+  (worker không cập nhật heartbeat, chưa có bước đánh `FAILED` cho job treo), nên job `RUNNING` bị
+  kẹt vẫn kẹt mãi. Xem `docs/known-issues.md`.
+- **Reconcile**: `ReconcileQueuedJobs` quét định kỳ các job `QUEUED` có thể bị mất khỏi hàng đợi
+  (ví dụ Redis khởi động lại) và đẩy lại.
+- **Xác thực**: mọi endpoint trừ `/health` yêu cầu header `X-API-Key` khớp biến `API_KEY`
+  (`interfaces/api/security.py`). UI và `scripts/smoke_test.py` phải gửi header này.
+
+### Biến môi trường
+
+| Biến | Dùng ở | Ý nghĩa |
+|---|---|---|
+| `DATABASE_URL` | API, worker | Postgres lưu job (và blob nếu `STORAGE_BACKEND=postgres`) |
+| `REDIS_URL`, `QUEUE_NAME` | API, worker | Hàng đợi khi `JOB_DISPATCHER=redis` |
+| `JOB_DISPATCHER` | API | `redis` (mặc định) hoặc `local` |
+| `STORAGE_BACKEND`, `STORAGE_DIR` | API, worker | `local` hoặc `postgres` |
+| `API_KEY` | API, UI | Khóa xác thực `X-API-Key` |
+| `API_URL` | UI | Địa chỉ API |
+| `SOLVER_MAX_WORKERS`, `SOLVER_MAX_TIME_S` | worker | Trần số luồng và thời gian giải |
+
+## Hiệu năng và quy mô
+CP-SAT chạy nhiều luồng nên kết quả không lặp lại chính xác giữa các lần. Số đo mới nhất
+(`docs/reports/scale_benchmark.md`): 30 lớp giải tối ưu trong khoảng 12 s, 50 lớp có nghiệm
+trong 60 s nhưng chưa tối ưu. Giải hai pha và `AddHint` không cải thiện. Các encoder tối ưu xem
+`docs/encoders.md`.
+
+## Excel và giao diện
+`ImportExcel` (`OpenpyxlExcelImporter`) đọc file Excel (sheet Phòng, Giáo viên, Lớp, Môn) thành
+payload `solve`; `ExportExcel` ghi lịch ra Excel. Streamlit (`interfaces/ui`, hiện mới có tải file, gửi job và xem trạng thái) không gọi use case
+trực tiếp mà đi qua `SolverApiClient` gọi API, nên UI và solver triển khai độc lập.
 
 ## Quy tắc phụ thuộc giữa các tầng
 | Tầng | Được import |
