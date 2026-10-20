@@ -1,4 +1,5 @@
 from timetable.application.use_cases.get_job import GetJob
+from timetable.application.use_cases.get_job_result import GetJobResult
 from timetable.application.use_cases.submit_solve_job import SubmitSolveJob
 
 
@@ -22,3 +23,11 @@ def create_get_job() -> GetJob:
     from timetable.infrastructure.persistence.job_repository import JobRepository
 
     return GetJob(repository=JobRepository())
+
+
+def create_get_job_result() -> GetJobResult:
+    """Build the dependencies required to read a job result."""
+    from timetable.infrastructure.persistence.job_repository import JobRepository
+    from timetable.infrastructure.storage.factory import create_storage
+
+    return GetJobResult(repository=JobRepository(), storage=create_storage())
