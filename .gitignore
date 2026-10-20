@@ -23,3 +23,5 @@ data/
 .coverage.*
 htmlcov/
 backups/
+
+mypy-report.txt

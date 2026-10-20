@@ -37,6 +37,19 @@ Phòng cho phép theo loại (MBA vào G316, môn vẽ vào G313, hội trườn
 `SolveResult.objective` có giá trị khi mô hình có hàm mục tiêu, và `SolveResult.cost_terms` trả
 từng số hạng.
 
+## Encoder tối ưu (tùy chọn, mặc định tắt)
+`infrastructure/solver/optimization.py` có ba encoder, truyền qua
+`build_default_solver(problem, data, optimization_encoders=(...))`:
+
+| Encoder | Ý nghĩa |
+|---|---|
+| `identical_unit_order` | Các ca học giống hệt nhau (cùng môn, lớp, giáo viên, độ dài, loại phòng) được xếp theo thứ tự thời gian |
+| `room_value_precedence` | Phá đối xứng giữa các phòng giống hệt nhau: phòng j chỉ được dùng sau phòng j-1 |
+| `class_day_capacity` | Ràng buộc suy ra: sức chứa tiết và block 2 tiết của một lớp trong một ngày (từ `day_patterns`) |
+
+Ở 50 lớp các encoder này làm kết quả xấu đi (obj 302 hoặc UNKNOWN so với khoảng 137 đến 217), nên
+không bật mặc định. Chỉ bật sau khi đo bằng `scripts/bench_model.py` trên dữ liệu của mình.
+
 ## Quy tắc tối đa 2 tiết liên tiếp
 - Chỉ áp dụng cho lớp, giáo viên không bị giới hạn.
 - Đếm theo chỉ số tiết, tính cả các tiết bị chiếm: block 2 tiết tính là 2 tiết. Ví dụ tiết 3,4
