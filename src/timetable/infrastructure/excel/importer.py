@@ -12,6 +12,7 @@ from timetable.infrastructure.generator import (
     MAX_CONSECUTIVE_PERIODS,
     NUM_DAYS,
     NUM_PERIODS,
+    SCHEMA_VERSION,
 )
 from timetable.infrastructure.problem_loader import problem_from_dict
 
@@ -82,7 +83,7 @@ def _check_unique(sheet: str, rows: list[_Row], errors: list[str]) -> set[str]:
 
 
 class OpenpyxlExcelImporter:
-    def load(self, path: Path) -> Problem:
+    def load_data(self, path: Path) -> dict[str, Any]:
         try:
             wb = load_workbook(path, data_only=True)
         except (OSError, InvalidFileException, zipfile.BadZipFile, KeyError) as exc:
@@ -119,6 +120,7 @@ class OpenpyxlExcelImporter:
                     "also_supports": [s for s in supports if s],
                 }
             )
+
         class_data = [
             {
                 "id": str(r["id"]),
@@ -152,6 +154,7 @@ class OpenpyxlExcelImporter:
             raise ExcelImportError("\n".join(errors))
 
         data = {
+            "schema_version": SCHEMA_VERSION,
             "grid": {
                 "days": NUM_DAYS,
                 "periods": NUM_PERIODS,
@@ -163,6 +166,10 @@ class OpenpyxlExcelImporter:
             "courses": course_data,
             "constraints": {"max_consecutive_periods": MAX_CONSECUTIVE_PERIODS},
         }
+        return data
+
+    def load(self, path: Path) -> Problem:
+        data = self.load_data(path)
         try:
             return problem_from_dict(data)
         except (ValueError, TypeError) as exc:
