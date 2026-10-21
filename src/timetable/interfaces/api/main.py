@@ -1,4 +1,4 @@
-from typing import Annotated, Any
+from typing import Annotated
 from uuid import UUID
 
 from fastapi import Depends, FastAPI, HTTPException, Security, status
@@ -12,6 +12,7 @@ from timetable.interfaces.api.dependencies import (
     get_submit_solve_job,
 )
 from timetable.interfaces.api.schemas.job_response import JobResponse
+from timetable.interfaces.api.schemas.job_result_response import JobResultResponse
 from timetable.interfaces.api.schemas.solve import SolveRequest
 from timetable.interfaces.api.schemas.solve_response import SolveAcceptedResponse
 from timetable.interfaces.api.security import verify_api_key
@@ -50,10 +51,11 @@ def health_check() -> dict[str, str]:
             "description": "Solve job accepted",
             "content": {
                 "application/json": {
+                    "schema": {"$ref": "#/components/schemas/SolveAcceptedResponse"},
                     "example": {
                         "status": "queued",
                         "job_id": "123e4567-e89b-12d3-a456-426614174000",
-                    }
+                    },
                 }
             },
         },
@@ -138,23 +140,40 @@ def get_job(
 
 @app.get(
     "/jobs/{job_id}/result",
+    response_model=JobResultResponse,
+    response_description="Solver result, assignments, and validation violations",
     tags=["Jobs"],
     summary="Get job result",
     description="Return the result.json of a finished job (status, assignments, violations).",
     dependencies=[Security(verify_api_key)],
     responses={
-        401: {"description": "API key is missing or invalid"},
-        404: {"description": "Job not found"},
-        409: {"description": "Result is not ready"},
+        401: {
+            "description": "API key is missing or invalid",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Invalid or missing API key"},
+                }
+            },
+        },
+        404: {
+            "description": "Job not found",
+            "content": {"application/json": {"example": {"detail": "Job not found"}}},
+        },
+        409: {
+            "description": "The job has not produced a result yet",
+            "content": {
+                "application/json": {"example": {"detail": "Result is not ready"}},
+            },
+        },
     },
 )
 def get_job_result(
     job_id: UUID,
     use_case: Annotated[GetJobResult, Depends(get_get_job_result)],
-) -> dict[str, Any]:
+) -> JobResultResponse:
     """Return the result of a finished job."""
     try:
-        return use_case.execute(job_id)
+        return JobResultResponse.model_validate(use_case.execute(job_id))
     except JobNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found") from exc
     except ResultNotReadyError as exc:
