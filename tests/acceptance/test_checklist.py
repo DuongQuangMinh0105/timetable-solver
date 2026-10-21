@@ -1,6 +1,5 @@
 from pathlib import Path
 
-# Sửa lại đường dẫn import excel_helpers từ thư mục tests.unit
 from tests.unit.excel_helpers import sheets_from_data, write_workbook
 
 from timetable.application.dto.solve import SolveOptions, SolveStatus
@@ -12,7 +11,7 @@ from timetable.infrastructure.solver.default_solver import build_default_solver
 
 # --- Checklist Ràng buộc: Case PASS ---
 def test_acceptance_checklist_pass(tmp_path: Path) -> None:
-    """Test chấp nhận PASS: Dữ liệu chuẩn từ generator phải đạt 0 vi phạm cứng (Hard = 0)."""
+    """Test chấp nhận PASS: Dữ liệu chuẩn từ generator phải đạt 0 vi phạm."""
     data = generate_v1()
     source = write_workbook(tmp_path / "in_pass.xlsx", sheets_from_data(data))
 
@@ -29,7 +28,10 @@ def test_acceptance_checklist_pass(tmp_path: Path) -> None:
 
 # --- Checklist Ràng buộc: Case FAIL ---
 def test_acceptance_checklist_fail(tmp_path: Path) -> None:
-    """Test chấp nhận FAIL: Kiểm tra hệ thống ghi nhận và báo cáo lỗi khi dữ liệu hoặc ràng buộc không thỏa mãn."""
+    """Test chấp nhận FAIL: Kiểm tra hệ thống ghi nhận và báo cáo lỗi
+
+    khi dữ liệu hoặc ràng buộc không thỏa mãn.
+    """
     data = generate_v1()
     source = write_workbook(tmp_path / "in_fail.xlsx", sheets_from_data(data))
 
