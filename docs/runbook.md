@@ -7,8 +7,11 @@ Biến môi trường và giới hạn của gói miễn phí: xem `docs/deploy-
 ## Kiểm tra nhanh sau mỗi lần deploy
 
 ```powershell
+$env:API_KEY = Read-Host "Dán API_KEY"
 uv run python scripts/smoke_test.py https://<địa-chỉ>
 ```
+Khóa `API_KEY` lấy từ nơi lưu bí mật của nhóm (trùng với giá trị trong Render, tab Environment).
+Smoke test cũng kiểm tra job có lịch thật, nên job hết giờ giải (`UNKNOWN`) bị báo lỗi.
 
 Kết quả đúng kết thúc bằng `SMOKE TEST OK`, kèm thời gian giải. Lần gọi đầu sau khi dịch vụ ngủ có
 thể mất khoảng một phút, script tự chờ tối đa 120 giây. Script thoát mã 1 nếu `/health` không lên,
