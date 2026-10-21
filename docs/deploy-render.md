@@ -13,6 +13,7 @@
 | Biến | Giá trị | Ghi chú |
 |---|---|---|
 | `DATABASE_URL` | `postgresql+psycopg://<user>:<password>@<host>/<db>?sslmode=require` | Chuỗi kết nối Neon. Nhập trong Render Dashboard, **không commit** |
+| `API_KEY` | (bí mật) | Khóa gửi trong header `X-API-Key` cho `/solve` và `/jobs/...`. Thiếu biến này thì các endpoint đó trả 500 |
 | `STORAGE_BACKEND` | `postgres` | `local` (mặc định) dùng thư mục `STORAGE_DIR` |
 | `JOB_DISPATCHER` | `local` | API chạy worker như tiến trình con, không cần Redis. Mặc định là `redis` (hàng đợi + worker riêng) |
 | `SOLVER_MAX_WORKERS` | `1` | Giới hạn số luồng của bộ giải, vì Render miễn phí chỉ có 0,1 CPU |
