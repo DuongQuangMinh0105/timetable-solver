@@ -196,11 +196,34 @@ def test_soft_weights_use_defaults_when_missing() -> None:
     assert soft_weights_from_dict({"soft_weights": {"avoid_saturday": 7}})[1] == 7
 
 
-def test_soft_weights_accept_whole_floats_and_reject_fractions() -> None:
-    assert soft_weights_from_dict({"soft_weights": {"avoid_saturday": 10.0}})[1] == 10
+@pytest.mark.parametrize(
+    "case,config",
+    [
+        pytest.param("negative", {"avoid_saturday": -1}, id="negative"),
+        pytest.param("fractional", {"avoid_saturday": 2.5}, id="fractional"),
+        pytest.param("whole-float", {"avoid_saturday": 10.0}, id="whole-float"),
+        pytest.param("numeric-string", {"avoid_saturday": "1"}, id="numeric-string"),
+        pytest.param("boolean", {"avoid_saturday": True}, id="boolean"),
+        pytest.param("unsupported-key", {"unknown": 1}, id="unsupported-key"),
+        pytest.param("not-an-object", ["avoid_saturday", 1], id="not-an-object"),
+        pytest.param("null-config", None, id="null-config"),
+    ],
+)
+def test_soft_weights_reject_invalid_configs(case: str, config: object) -> None:
+    with pytest.raises(ValueError, match="soft_weights"):
+        soft_weights_from_dict({"soft_weights": config})
 
-    with pytest.raises(ValueError, match="avoid_saturday"):
-        soft_weights_from_dict({"soft_weights": {"avoid_saturday": 2.5}})
+
+def test_soft_weights_accept_nonnegative_integer_values() -> None:
+    assert soft_weights_from_dict(
+        {
+            "soft_weights": {
+                "room_stability": 0,
+                "avoid_saturday": 10,
+                "reserve_mba_room": 2,
+            }
+        }
+    ) == (0, 10, 2)
 
 
 class _RecordingSolver:

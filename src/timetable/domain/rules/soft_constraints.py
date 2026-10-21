@@ -8,8 +8,40 @@ W_ROOM = 5
 W_SAT = 10
 W_G316 = 2
 
+SOFT_WEIGHT_DEFAULTS = {
+    "room_stability": W_ROOM,
+    "avoid_saturday": W_SAT,
+    "reserve_mba_room": W_G316,
+}
+SOFT_WEIGHT_KEYS = frozenset(SOFT_WEIGHT_DEFAULTS)
+
 # One scheduled session = (offering, day, start_period, room)
 Session = tuple[str, int, int, str]
+
+
+def parse_soft_weights(config: object) -> tuple[int, int, int]:
+    """Validate and order the supported nonnegative integer soft-constraint weights."""
+    if not isinstance(config, dict):
+        raise ValueError("soft_weights must be an object")
+
+    unsupported = set(config) - SOFT_WEIGHT_KEYS
+    if unsupported:
+        raise ValueError(f"Unsupported soft_weights keys: {sorted(unsupported)}")
+
+    weights: dict[str, int] = {}
+    for key, default in SOFT_WEIGHT_DEFAULTS.items():
+        value = config.get(key, default)
+        if isinstance(value, bool) or not isinstance(value, int):
+            raise ValueError(f"soft_weights.{key} must be an integer")
+        if value < 0:
+            raise ValueError(f"soft_weights.{key} must be nonnegative")
+        weights[key] = value
+
+    return (
+        weights["room_stability"],
+        weights["avoid_saturday"],
+        weights["reserve_mba_room"],
+    )
 
 
 def reference_cost(

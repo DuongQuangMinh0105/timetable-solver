@@ -11,7 +11,6 @@ from fastapi.testclient import TestClient
 from sqlalchemy import delete
 
 from timetable.application.use_cases.submit_solve_job import SubmitSolveJob
-from timetable.domain.entities.job import JobStatus
 from timetable.infrastructure.dispatch.redis import RedisJobDispatcher
 from timetable.infrastructure.persistence.database import SessionFactory
 from timetable.infrastructure.persistence.job_repository import JobRepository
@@ -96,48 +95,43 @@ def _run_redis_worker_e2e(
         response_job_id = response_body.get("job_id")
         assert isinstance(response_job_id, str)
         job_id = UUID(response_job_id)
+        storage_keys = [f"inputs/{job_id}.json", f"jobs/{job_id}/result.json"]
 
         deadline = time.monotonic() + 60
-        job = None
+        with TestClient(app) as client:
+            while time.monotonic() < deadline:
+                if worker.poll() is not None:
+                    pytest.fail(f"Redis worker exited unexpectedly: {worker.returncode}")
 
-        while time.monotonic() < deadline:
-            if worker.poll() is not None:
-                pytest.fail(f"Redis worker exited unexpectedly: {worker.returncode}")
+                job_response = client.get(
+                    f"/jobs/{job_id}",
+                    headers={"X-API-Key": api_key},
+                )
+                assert job_response.status_code == 200, job_response.text
+                job_status = job_response.json()["status"]
 
-            job = JobRepository().get_by_id(job_id)
+                if job_status in {"DONE", "FAILED"}:
+                    break
 
-            if job is not None and job.status in {
-                JobStatus.COMPLETED,
-                JobStatus.FAILED,
-            }:
-                break
+                time.sleep(0.25)
+            else:
+                pytest.fail(f"Job {job_id} did not finish before the timeout")
 
-            time.sleep(0.25)
+            assert job_status == "DONE", f"Job ended with status {job_status}"
 
-        assert job is not None, f"Job {job_id} was not found"
-        assert job.status == JobStatus.COMPLETED, (
-            f"Job ended with status {job.status}; error: {job.error_message}"
-        )
-        assert job.result_ref is not None
+            result_response = client.get(
+                f"/jobs/{job_id}/result",
+                headers={"X-API-Key": api_key},
+            )
+            assert result_response.status_code == 200, result_response.text
+            result = result_response.json()
 
-        storage_keys = [job.input_ref, job.result_ref]
-        result_bytes = storage.get(job.result_ref)
-        result: object = json.loads(result_bytes)
-
-        assert isinstance(result, dict)
-
-        status = result.get("status")
-        violations = result.get("violations")
-        assignments = result.get("assignments")
+        assert result["status"] in {"OPTIMAL", "FEASIBLE"}
+        assert result["violations"] == []
+        assert isinstance(result["assignments"], list)
         lesson_units = payload.get("lesson_units")
-
-        assert isinstance(status, str)
-        assert status in {"OPTIMAL", "FEASIBLE"}
-        assert isinstance(violations, list)
-        assert violations == []
-        assert isinstance(assignments, list)
         assert isinstance(lesson_units, list)
-        assert len(assignments) == len(lesson_units)
+        assert len(result["assignments"]) == len(lesson_units)
 
     finally:
         app.dependency_overrides.pop(get_submit_solve_job, None)

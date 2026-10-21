@@ -35,9 +35,25 @@ def _call(outcome: Any, key: str | None = "k") -> Any:
 
 
 def test_returns_result() -> None:
-    response = _call({"status": "OPTIMAL", "assignments": []})
+    response = _call(
+        {
+            "constraint_config_version": "1.0",
+            "status": "OPTIMAL",
+            "objective": 0,
+            "cost_terms": {"room": 0, "sat": 0, "g316": 0},
+            "assignments": [],
+            "violations": [],
+        }
+    )
     assert response.status_code == 200
-    assert response.json()["status"] == "OPTIMAL"
+    assert response.json() == {
+        "constraint_config_version": "1.0",
+        "status": "OPTIMAL",
+        "objective": 0,
+        "cost_terms": {"room": 0, "sat": 0, "g316": 0},
+        "assignments": [],
+        "violations": [],
+    }
 
 
 def test_unknown_job_is_404() -> None:

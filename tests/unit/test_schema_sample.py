@@ -1,4 +1,12 @@
+import json
+from pathlib import Path
+
+from timetable.application.use_cases.solve_timetable import SolveTimetable
 from timetable.domain.entities import Problem
+from timetable.domain.services.timetable_checker import check_timetable
+from timetable.infrastructure.problem_loader import problem_from_dict, solve_options_from_dict
+from timetable.infrastructure.solver.default_solver import build_default_solver
+from timetable.interfaces.api.schemas.solve import SolveRequest
 
 
 def test_sample_loads_and_references_are_consistent(sample_problem: Problem) -> None:
@@ -32,3 +40,26 @@ def test_sample_uses_real_rooms_and_excludes_non_teaching_rooms(sample_problem: 
     assert {"G313", "G316", "G502"} <= ids
     assert not ids & {"G311", "G312", "G315", "G320", "G501", "G505", "G506", "G507"}
     assert sample_problem.max_consecutive_periods == 2
+
+
+def test_api_demo_sample_is_a_valid_solve_request() -> None:
+    path = Path(__file__).resolve().parents[2] / "docs" / "schema" / "api-demo.sample.json"
+    payload = json.loads(path.read_text(encoding="utf-8"))
+
+    request = SolveRequest.model_validate(payload)
+
+    assert [unit.id for unit in request.lesson_units] == ["UNIT-MATH", "UNIT-ENG"]
+
+
+def test_api_demo_sample_produces_a_valid_schedule() -> None:
+    path = Path(__file__).resolve().parents[2] / "docs" / "schema" / "api-demo.sample.json"
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    problem = problem_from_dict(payload)
+    outcome = SolveTimetable(
+        build_default_solver(problem, payload),
+        check_timetable,
+    ).execute(problem, solve_options_from_dict(payload))
+
+    assert outcome.ok, outcome.violations
+    assert outcome.result.timetable is not None
+    assert len(outcome.result.timetable.assignments) == 2

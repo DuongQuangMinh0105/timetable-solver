@@ -1,0 +1,72 @@
+{
+  "schema_version": "1.0",
+  "grid": {
+    "days": 5,
+    "periods": 4,
+    "allowed_periods": [0, 1, 2, 3]
+  },
+  "rooms": [
+    {
+      "id": "R-DEMO",
+      "name": "Demo Room",
+      "capacity": 24
+    }
+  ],
+  "teachers": [
+    {
+      "id": "T-MATH",
+      "name": "Math Teacher"
+    },
+    {
+      "id": "T-ENG",
+      "name": "English Teacher"
+    }
+  ],
+  "class_groups": [
+    {
+      "id": "C-DEMO",
+      "name": "Demo Class",
+      "size": 20
+    }
+  ],
+  "courses": [
+    {
+      "id": "COURSE-MATH",
+      "name": "Mathematics",
+      "class_id": "C-DEMO",
+      "teacher_id": "T-MATH",
+      "periods_per_week": 1
+    },
+    {
+      "id": "COURSE-ENG",
+      "name": "English",
+      "class_id": "C-DEMO",
+      "teacher_id": "T-ENG",
+      "periods_per_week": 1
+    }
+  ],
+  "lesson_units": [
+    {
+      "id": "UNIT-MATH",
+      "course_id": "COURSE-MATH",
+      "class_id": "C-DEMO",
+      "teacher_id": "T-MATH",
+      "duration": 1
+    },
+    {
+      "id": "UNIT-ENG",
+      "course_id": "COURSE-ENG",
+      "class_id": "C-DEMO",
+      "teacher_id": "T-ENG",
+      "duration": 1
+    }
+  ],
+  "constraints": {
+    "max_consecutive_periods": 2
+  },
+  "solver": {
+    "time_limit_s": 10,
+    "num_workers": 1,
+    "random_seed": 0
+  }
+}

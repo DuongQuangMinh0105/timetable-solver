@@ -92,4 +92,48 @@ def test_openapi_documents_api_key_header() -> None:
 
     assert schema["paths"]["/solve"]["post"]["security"]
     assert schema["paths"]["/jobs/{job_id}"]["get"]["security"]
+    assert schema["paths"]["/jobs/{job_id}/result"]["get"]["security"]
     assert "security" not in schema["paths"]["/health"]["get"]
+
+
+def test_openapi_documents_api_operations_and_response_schemas() -> None:
+    with TestClient(app) as client:
+        schema = client.get("/openapi.json").json()
+
+    operations = schema["paths"]
+    assert set(operations) == {"/health", "/solve", "/jobs/{job_id}", "/jobs/{job_id}/result"}
+    assert (
+        operations["/solve"]["post"]["requestBody"]["content"]["application/json"]["schema"]["$ref"]
+        == "#/components/schemas/SolveRequest"
+    )
+    assert (
+        operations["/solve"]["post"]["responses"]["202"]["content"]["application/json"]["schema"][
+            "$ref"
+        ]
+        == "#/components/schemas/SolveAcceptedResponse"
+    )
+    assert (
+        operations["/jobs/{job_id}"]["get"]["responses"]["200"]["content"]["application/json"][
+            "schema"
+        ]["$ref"]
+        == "#/components/schemas/JobResponse"
+    )
+    assert (
+        operations["/jobs/{job_id}/result"]["get"]["responses"]["200"]["content"][
+            "application/json"
+        ]["schema"]["$ref"]
+        == "#/components/schemas/JobResultResponse"
+    )
+    weight_schema = schema["components"]["schemas"]["SolveRequest"]["properties"]["soft_weights"]
+    assert weight_schema["additionalProperties"]["type"] == "integer"
+    assert weight_schema["additionalProperties"]["minimum"] == 0
+    assert "nonnegative integer weights" in weight_schema["description"]
+    assert set(operations["/solve"]["post"]["responses"]) >= {"202", "401", "422"}
+    assert set(operations["/jobs/{job_id}"]["get"]["responses"]) >= {"200", "401", "404", "422"}
+    assert set(operations["/jobs/{job_id}/result"]["get"]["responses"]) >= {
+        "200",
+        "401",
+        "404",
+        "409",
+        "422",
+    }
