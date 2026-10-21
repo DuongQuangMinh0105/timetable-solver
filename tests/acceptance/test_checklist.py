@@ -5,12 +5,9 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent / "unit"))
 
 from excel_helpers import sheets_from_data, write_workbook
-from openpyxl import load_workbook
-import pytest
 
 from timetable.application.dto.solve import SolveOptions, SolveStatus
 from timetable.domain.services.validation_report import build_report
-from timetable.infrastructure.excel.exporter import OpenpyxlExcelExporter
 from timetable.infrastructure.excel.importer import OpenpyxlExcelImporter
 from timetable.infrastructure.generator import generate_v1
 from timetable.infrastructure.solver.default_solver import build_default_solver
