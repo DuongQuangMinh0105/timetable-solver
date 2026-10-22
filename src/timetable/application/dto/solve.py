@@ -38,3 +38,5 @@ class SolveResult:
     cost_terms: dict[str, int] = field(default_factory=dict)
     # SolveStats sẽ được P2 bổ sung sau.
     stats: SolveStats = field(default_factory=SolveStats)
+    # Khi INFEASIBLE: tên các nhóm ràng buộc cứng xung đột (dạng "loại:chủ thể"), nếu tìm được.
+    conflict_groups: tuple[str, ...] = ()

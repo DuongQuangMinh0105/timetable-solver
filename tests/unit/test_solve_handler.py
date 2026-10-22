@@ -91,6 +91,7 @@ def test_result_has_agreed_format() -> None:
         "cost_terms",
         "assignments",
         "violations",
+        "diagnosis",
     }
 
     assert result["objective"] is None

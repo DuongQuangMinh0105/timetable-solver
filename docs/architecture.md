@@ -113,6 +113,10 @@ Client ──GET /jobs/{id}, /jobs/{id}/result──▶ API (GetJob, GetJobResul
 | `API_URL` | UI | Địa chỉ API |
 | `SOLVER_MAX_WORKERS`, `SOLVER_MAX_TIME_S` | worker | Trần số luồng và thời gian giải |
 
+## Chẩn đoán vô nghiệm
+Xem `docs/diagnosis.md`: kiểm tra sức chứa trước khi giải, lõi vô nghiệm theo nhóm ràng buộc, và trường
+`diagnosis` trong kết quả job.
+
 ## Hiệu năng và quy mô
 CP-SAT chạy nhiều luồng nên kết quả không lặp lại chính xác giữa các lần. Số đo mới nhất
 (`docs/reports/scale_benchmark.md`): 30 lớp giải tối ưu trong khoảng 12 s, 50 lớp có nghiệm
