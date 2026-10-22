@@ -190,3 +190,12 @@ def test_fails_when_not_every_lesson_unit_is_assigned(fake_api: Fake, input_file
 
     assert result.returncode == 1
     assert "1 phân công, input có 2 ca học" in result.stderr
+
+
+@pytest.mark.parametrize("url", ["", "   ", "khong-co-giao-thuc.example.com"])
+def test_fails_cleanly_with_invalid_url(url: str, input_file: Path) -> None:
+    result = _run(url, input_file)
+
+    assert result.returncode == 1
+    assert "địa chỉ dịch vụ không hợp lệ" in result.stderr
+    assert "Traceback" not in result.stderr

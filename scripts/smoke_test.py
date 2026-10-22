@@ -152,7 +152,14 @@ def run(
     timeout: float,
     poll: float,
 ) -> None:
-    base_url = base_url.rstrip("/")
+
+    base_url = base_url.strip().rstrip("/")
+    if not base_url.startswith(("http://", "https://")):
+        raise SmokeTestError(
+            f"địa chỉ dịch vụ không hợp lệ: {base_url!r} "
+            "(cần bắt đầu bằng http:// hoặc https://; "
+            "trên GitHub Actions kiểm tra secret STAGING_URL)"
+        )
     print(f"Smoke test: {base_url}")
     if not os.environ.get("API_KEY"):
         print("Cảnh báo: chưa đặt biến môi trường API_KEY, các endpoint có khóa sẽ trả 401.")
