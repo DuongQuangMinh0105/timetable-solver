@@ -38,14 +38,18 @@ def test_precheck_too_many_students_for_room():
     assert report.source == "precheck"
 
 
-def test_precheck_design_room_missing():
-    """Không có phòng Design (G313)."""
-    offerings = [OfferingInfo("A", "design", 20, 2, "T1")]
+def test_precheck_design_room_overload():
+    """Quá nhiều lớp Design cho 1 phòng G313 (2 lớp x 20 tiết = 40 > 36)."""
+    offerings = [
+        OfferingInfo("D1", "design", 20, 20, "T1"),  # periods_per_week=20
+        OfferingInfo("D2", "design", 20, 20, "T2"),  # periods_per_week=20
+    ]
     fake = FakeDiagnoser([])
     report = DiagnoseInfeasibility(fake).execute(
         offerings, regular_room_count=5, design_room_count=1
     )
     assert report.source == "precheck"
+    assert any("design_room_overload" in i.code for i in report.issues)
 
 
 def test_solver_mba_room_missing():
