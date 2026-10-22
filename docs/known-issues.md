@@ -9,7 +9,7 @@ băng code, **Thấp** = dọn dẹp.
 | # | Vấn đề | Chi tiết | Người xử lý |
 |---|---|---|---|
 | 1 | Chưa có E2E trên staging | `docs/reports/` chỉ có báo cáo cục bộ. Chưa có danh sách lỗi theo mức độ, chưa chạy `scripts/smoke_test.py` trên Render | P5, P4 |
-| 2 | Chẩn đoán vô nghiệm chưa chạy thật | `unsat_core.py` cần `group_literals` mà encoder cứng chưa tạo, nên `DiagnoseInfeasibility` chưa nối vào `SolveTimetable` và API. Thông báo đang bằng tiếng Anh | P2 (nối vào builder cần P1 review) |
+| 2 | Chẩn đoán vô nghiệm đã nối vào solver, cần hoàn thiện | Đã có literal theo nhóm, kiểm tra sức chứa trước khi giải và trường `diagnosis` trong kết quả (xem `docs/diagnosis.md`). Còn: thống nhất và tinh chỉnh thông báo, UI hiển thị `diagnosis`, chẩn đoán `UNKNOWN` | P2, P5 |
 | 3 | Baseline trọng số đã có, cần đọc thận trọng | `docs/reports/baseline.md`, `hint_benchmark.md` (PR #63): giữ W 5-10-2, hint không giúp. Mỗi cấu hình chạy 1 lần, 30 s, nên chênh lệch nhỏ (20 so với 25) là nhiễu. 50 lớp xem `scale_benchmark.md` | P2 |
 | 5 | Giao diện mới ở mức khung | `interfaces/ui/` có tải Excel, gửi job và xem trạng thái (PR #62); chưa hiển thị lịch kết quả, chưa tải Excel kết quả | P5 |
 

@@ -9,6 +9,7 @@ Usage (P1 must follow this when adding hard constraints):
 
 from __future__ import annotations
 
+import time
 from collections.abc import Mapping
 
 from ortools.sat.python import cp_model
@@ -38,7 +39,43 @@ def find_conflicting_groups(
         return status, []
 
     core = solver.SufficientAssumptionsForInfeasibility()
-    return status, sorted(name_by_index[i] for i in core if i in name_by_index)
+    names = sorted(name_by_index[i] for i in core if i in name_by_index)
+    return status, minimize_core(model, group_literals, names, time_limit_s)
+
+
+MAX_CORE_TO_MINIMIZE = 40
+PER_SOLVE_LIMIT_S = 2.0
+
+
+def minimize_core(
+    model: cp_model.CpModel,
+    group_literals: Mapping[str, cp_model.IntVar],
+    core: list[str],
+    time_limit_s: float,
+) -> list[str]:
+    """Thu nhỏ lõi bằng cách thử bỏ từng nhóm: bỏ được mà vẫn vô nghiệm thì nhóm đó thừa.
+
+    Lõi do CP-SAT trả về chỉ đủ để giải thích vô nghiệm, không tối thiểu. Bước này tốn thêm
+    vài lần giải nhỏ nên bị chặn bởi kích thước lõi và `time_limit_s`; hết hạn mức thì giữ nguyên.
+    """
+    if len(core) > MAX_CORE_TO_MINIMIZE:
+        return core
+    deadline = time.monotonic() + time_limit_s
+    current = list(core)
+    for name in list(core):
+        if time.monotonic() >= deadline:
+            break
+        trial = [n for n in current if n != name]
+        if not trial:
+            continue
+        model.clear_assumptions()
+        model.add_assumptions([group_literals[n] for n in trial])
+        solver = cp_model.CpSolver()
+        solver.parameters.max_time_in_seconds = min(PER_SOLVE_LIMIT_S, deadline - time.monotonic())
+        solver.parameters.num_workers = 1
+        if solver.solve(model) == cp_model.INFEASIBLE:
+            current = trial
+    return sorted(current)
 
 
 class CpSatInfeasibilityDiagnoser:

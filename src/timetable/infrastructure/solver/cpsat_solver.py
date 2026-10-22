@@ -12,6 +12,9 @@ from timetable.application.dto.solve import (
 from timetable.domain.entities import Assignment, Problem, Timetable
 from timetable.infrastructure.solver.builder import build_model
 from timetable.infrastructure.solver.encoder import ConstraintEncoder, ObjectiveApplier
+from timetable.infrastructure.solver.unsat_core import find_conflicting_groups
+
+DIAGNOSIS_TIME_LIMIT_S = 10.0
 
 _STATUS = {
     cp_model.OPTIMAL: SolveStatus.OPTIMAL,
@@ -59,6 +62,8 @@ class CpSatSolver:
             num_booleans=solver.num_booleans,
         )
 
+        if status == SolveStatus.INFEASIBLE:
+            return SolveResult(status=status, stats=stats, conflict_groups=self._diagnose(problem))
         if status not in (SolveStatus.OPTIMAL, SolveStatus.FEASIBLE):
             return SolveResult(status=status, stats=stats)
 
@@ -88,3 +93,13 @@ class CpSatSolver:
             cost_terms=cost_terms,
             stats=stats,
         )
+
+    def _diagnose(self, problem: Problem) -> tuple[str, ...]:
+        """Dựng lại mô hình ở chế độ chẩn đoán để tìm nhóm ràng buộc cứng xung đột."""
+        ctx = build_model(problem, diagnostic=True)
+        if not ctx.group_literals:
+            return ()
+        _status, groups = find_conflicting_groups(
+            ctx.model, ctx.group_literals, DIAGNOSIS_TIME_LIMIT_S
+        )
+        return tuple(groups)

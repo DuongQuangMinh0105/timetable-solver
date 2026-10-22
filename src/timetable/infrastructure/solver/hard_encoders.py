@@ -24,10 +24,16 @@ def occupancy_groups(ctx: ModelContext, owner_of: Callable[[VarKey], str]) -> Oc
     return groups
 
 
-def _at_most_one_per_group(ctx: ModelContext, owner_of: Callable[[VarKey], str]) -> None:
-    for variables in occupancy_groups(ctx, owner_of).values():
-        if len(variables) > 1:
+def _at_most_one_per_group(ctx: ModelContext, owner_of: Callable[[VarKey], str], kind: str) -> None:
+    for (owner, _day, _period), variables in occupancy_groups(ctx, owner_of).items():
+        if len(variables) <= 1:
+            continue
+        if ctx.group_literals is None:
             ctx.model.add_at_most_one(variables)
+        else:
+            ctx.model.add(cp_model.LinearExpr.sum(variables) <= 1).only_enforce_if(
+                ctx.group_literal(f"{kind}:{owner}")
+            )
 
 
 class EachUnitOnceEncoder:
@@ -39,9 +45,14 @@ class EachUnitOnceEncoder:
         by_unit: dict[str, list[cp_model.IntVar]] = {u.id: [] for u in ctx.problem.lesson_units}
         for (unit_id, _day, _period, _room), var in ctx.s.items():
             by_unit[unit_id].append(var)
-        for variables in by_unit.values():
+        for unit_id, variables in by_unit.items():
             # Danh sách rỗng (không có phòng hay ô hợp lệ) làm mô hình vô nghiệm, đúng mong muốn.
-            ctx.model.add_exactly_one(variables)
+            if ctx.group_literals is None:
+                ctx.model.add_exactly_one(variables)
+            else:
+                ctx.model.add(cp_model.LinearExpr.sum(variables) == 1).only_enforce_if(
+                    ctx.group_literal(f"{EachUnitOnceEncoder.name}:{unit_id}")
+                )
 
 
 class RoomNoOverlapEncoder:
@@ -50,7 +61,7 @@ class RoomNoOverlapEncoder:
     name = "room_no_overlap"
 
     def encode(self, ctx: ModelContext) -> None:
-        _at_most_one_per_group(ctx, lambda k: k[3])
+        _at_most_one_per_group(ctx, lambda k: k[3], self.name)
 
 
 class TeacherNoOverlapEncoder:
@@ -60,7 +71,7 @@ class TeacherNoOverlapEncoder:
 
     def encode(self, ctx: ModelContext) -> None:
         teacher_of = {u.id: u.teacher_id for u in ctx.problem.lesson_units}
-        _at_most_one_per_group(ctx, lambda k: teacher_of[k[0]])
+        _at_most_one_per_group(ctx, lambda k: teacher_of[k[0]], self.name)
 
 
 class ClassNoOverlapEncoder:
@@ -70,7 +81,7 @@ class ClassNoOverlapEncoder:
 
     def encode(self, ctx: ModelContext) -> None:
         class_of = {u.id: u.class_id for u in ctx.problem.lesson_units}
-        _at_most_one_per_group(ctx, lambda k: class_of[k[0]])
+        _at_most_one_per_group(ctx, lambda k: class_of[k[0]], self.name)
 
 
 class MaxConsecutiveEncoder:
@@ -107,4 +118,6 @@ class MaxConsecutiveEncoder:
                     busy[(class_id, day, p)] for p in window_periods if (class_id, day, p) in busy
                 ]
                 if len(window) > max_run:
-                    ctx.model.add(sum(window) <= max_run)
+                    limit = ctx.model.add(sum(window) <= max_run)
+                    if ctx.group_literals is not None:
+                        limit.only_enforce_if(ctx.group_literal(f"{self.name}:{class_id}"))
