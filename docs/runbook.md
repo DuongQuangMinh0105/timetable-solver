@@ -29,6 +29,7 @@ thể mất khoảng một phút, script tự chờ tối đa 120 giây. Script 
 
 ## Xem log
 
+Cảnh báo tự động và các truy vấn kiểm tra job lỗi: xem `docs/monitoring.md`.
 Render, dịch vụ, tab **Logs**. Tìm `Job` (kết quả từng job), `Worker started`, `Traceback` (lỗi).
 Các dòng `GET /health` mỗi 5 giây là Render tự kiểm tra, bình thường.
 

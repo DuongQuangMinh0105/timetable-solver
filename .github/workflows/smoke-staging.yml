@@ -1,0 +1,21 @@
+name: Smoke test staging
+
+# Gọi thử dịch vụ staging trên Render: /health, POST /solve, chờ job, kiểm tra lịch.
+# Chạy tự động mỗi 6 giờ và chạy tay được (Actions, Smoke test staging, Run workflow).
+# Job thất bại thì GitHub gửi thông báo, đó chính là cảnh báo khi staging hỏng.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 */6 * * *" # giờ UTC
+
+jobs:
+  smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Smoke test
+        env:
+          API_KEY: ${{ secrets.STAGING_API_KEY }}
+          STAGING_URL: ${{ secrets.STAGING_URL }}
+        run: python3 scripts/smoke_test.py "$STAGING_URL" --wake-timeout 180 --timeout 600
