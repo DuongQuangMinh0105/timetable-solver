@@ -17,6 +17,7 @@ dependencies = [
     "python-dotenv>=1.2.4",
     "redis>=8.1.0",
     "sqlalchemy>=2.1.4",
+    "streamlit>=1.66.0",
     "uvicorn[standard]>=0.54.0",
 ]
 
@@ -34,7 +35,9 @@ dev = [
     "mypy>=2.4.0",
     "pre-commit>=4.6.2",
     "pytest>=9.1.1",
+    "pytest-cov>=6.0",
     "ruff>=0.17.00",
+    "types-openpyxl>=3.1.5.20261017",
 ]
 
 [tool.ruff]
@@ -48,6 +51,32 @@ select = ["E", "F", "I", "UP", "B"]
 strict = true
 files = ["src"]
 
+[[tool.mypy.overrides]]
+module = [
+    "tests.*",
+    "test_diagnose_use_case",
+    "test_unsat_core",
+    "helpers",
+    "test_soft_constraints",
+    "test_solve_timetable",
+    "test_blocks",
+    "test_solver_handler",
+    "test_solve_handler",
+    "scripts.*",
+]
+disallow_untyped_defs = false
+disallow_untyped_calls = false
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
+
+[tool.coverage.run]
+source = ["src/timetable"]
+branch = false
+
+[tool.coverage.report]
+# Ngưỡng tối thiểu của CI. Nâng dần khi có thêm test, không hạ xuống.
+fail_under = 90
+show_missing = true
+skip_covered = true

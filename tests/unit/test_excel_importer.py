@@ -66,3 +66,10 @@ def test_not_an_excel_file_is_reported(tmp_path: Path) -> None:
     bad.write_text("không phải excel", encoding="utf-8")
     with pytest.raises(ExcelImportError, match="Không đọc được"):
         OpenpyxlExcelImporter().load(bad)
+
+
+def test_load_data_gives_json_ready_dict(tmp_path: Path) -> None:
+    path = write_workbook(tmp_path / "in.xlsx", _valid())
+    data = OpenpyxlExcelImporter().load_data(path)
+    assert data["schema_version"]
+    assert len(data["rooms"]) == len(generate_v1()["rooms"])

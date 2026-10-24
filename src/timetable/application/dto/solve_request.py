@@ -1,12 +1,15 @@
-from typing import Self
+from typing import Annotated, Self
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from timetable.application.dto.solve import SolveOptions
 from timetable.domain.constraint_config import (
     SUPPORTED_CONSTRAINT_CONFIG_VERSIONS,
     unsupported_version_message,
 )
+from timetable.domain.rules.soft_constraints import SOFT_WEIGHT_KEYS
+
+NonNegativeStrictInt = Annotated[int, Field(strict=True, ge=0)]
 
 
 class InputSchema(BaseModel):
@@ -98,12 +101,87 @@ class SolveRequest(InputSchema):
     courses: list[CourseInput] = Field(min_length=1)
     lesson_units: list[LessonUnitInput] = Field(default_factory=list)
     constraints: ConstraintsInput = Field(default_factory=ConstraintsInput)
-    soft_weights: dict[str, int | float] = Field(default_factory=dict)
+    soft_weights: dict[str, NonNegativeStrictInt] = Field(
+        default_factory=dict,
+        description=(
+            "Optional nonnegative integer weights for room_stability, avoid_saturday, and "
+            "reserve_mba_room."
+        ),
+    )
     solver: SolverInput = Field(default_factory=SolverInput)
+
+    @field_validator("soft_weights")
+    @classmethod
+    def validate_soft_weights(cls, weights: dict[str, int]) -> dict[str, int]:
+        unsupported = set(weights) - SOFT_WEIGHT_KEYS
+        if unsupported:
+            raise ValueError(f"Unsupported soft_weights keys: {sorted(unsupported)}")
+        return weights
 
     @model_validator(mode="after")
     def validate_constraint_config_version(self) -> Self:
         version = self.constraint_config_version
         if version is not None and version not in SUPPORTED_CONSTRAINT_CONFIG_VERSIONS:
             raise ValueError(unsupported_version_message(version))
+        return self
+
+    @model_validator(mode="after")
+    def validate_entity_references(self) -> Self:
+        collections = (
+            ("rooms", self.rooms),
+            ("teachers", self.teachers),
+            ("class_groups", self.class_groups),
+            ("courses", self.courses),
+            ("lesson_units", self.lesson_units),
+        )
+        for name, entities in collections:
+            identifiers = [entity.id for entity in entities]
+            if len(identifiers) != len(set(identifiers)):
+                raise ValueError(f"{name} ids must be unique")
+
+        class_ids = {class_group.id for class_group in self.class_groups}
+        teacher_ids = {teacher.id for teacher in self.teachers}
+        courses = {course.id: course for course in self.courses}
+
+        for course in self.courses:
+            if course.class_id not in class_ids:
+                raise ValueError(f"Course {course.id} references unknown class {course.class_id}")
+            if course.teacher_id not in teacher_ids:
+                raise ValueError(
+                    f"Course {course.id} references unknown teacher {course.teacher_id}"
+                )
+
+        if not self.lesson_units:
+            return self
+
+        total_by_course = dict.fromkeys(courses, 0)
+        for unit in self.lesson_units:
+            unit_course = courses.get(unit.course_id)
+            if unit_course is None:
+                raise ValueError(
+                    f"Lesson unit {unit.id} references unknown course {unit.course_id}"
+                )
+            if unit.class_id not in class_ids:
+                raise ValueError(f"Lesson unit {unit.id} references unknown class {unit.class_id}")
+            if unit.teacher_id not in teacher_ids:
+                raise ValueError(
+                    f"Lesson unit {unit.id} references unknown teacher {unit.teacher_id}"
+                )
+            if (
+                unit.class_id != unit_course.class_id
+                or unit.teacher_id != unit_course.teacher_id
+                or unit.required_room_type != unit_course.required_room_type
+            ):
+                raise ValueError(f"Lesson unit {unit.id} does not match course {unit_course.id}")
+            if unit.duration not in (1, 2):
+                raise ValueError(f"Lesson unit {unit.id} duration must be 1 or 2")
+            total_by_course[unit_course.id] += unit.duration
+
+        for course in self.courses:
+            if total_by_course[course.id] != course.periods_per_week:
+                raise ValueError(
+                    f"Course {course.id} requires {course.periods_per_week} periods but its "
+                    f"lesson units total {total_by_course[course.id]}"
+                )
+
         return self

@@ -16,3 +16,12 @@ dist/
 .ipynb_checkpoints/
 
 data/
+
+# Báo cáo và tệp tạm sinh ra khi chạy test
+*.log
+.coverage
+.coverage.*
+htmlcov/
+backups/
+
+mypy-report.txt

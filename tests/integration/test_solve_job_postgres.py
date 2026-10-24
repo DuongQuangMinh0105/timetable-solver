@@ -64,5 +64,6 @@ def test_solve_job_with_invalid_input_is_marked_failed(tmp_path: Path) -> None:
         assert saved is not None
         assert saved.status == JobStatus.FAILED
         assert saved.result_ref is None
+        assert saved.error_message
     finally:
         _cleanup(job)

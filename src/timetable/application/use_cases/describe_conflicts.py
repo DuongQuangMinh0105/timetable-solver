@@ -1,61 +1,70 @@
-from __future__ import annotations
+"""Dịch tên nhóm ràng buộc xung đột (từ lõi vô nghiệm của CP-SAT) thành thông báo tiếng Việt.
 
+Tên nhóm có dạng "loại:chủ thể" (xem `docs/diagnosis.md`), ví dụ "teacher_no_overlap:T3".
+"""
+
+from collections import defaultdict
 from collections.abc import Iterable
 
 from timetable.application.dto.diagnosis_report import DiagnosisReport
-from timetable.application.ports.infeasibility_diagnoser import InfeasibilityDiagnoser
-from timetable.domain.services.precheck import Issue, OfferingInfo, precheck
+from timetable.domain.services.precheck import Issue
 
-# Group names đã chốt với P1 (theo docs/diagnosis.md)
-GROUP_MESSAGES: dict[str, tuple[str, str]] = {
+MAX_OWNERS_SHOWN = 5
+
+# loại nhóm -> (thông báo có {owners}, gợi ý sửa)
+KIND_MESSAGES: dict[str, tuple[str, str]] = {
     "each_unit_once": (
-        "Mỗi đơn vị học (unit) phải được xếp đúng một lần, nhưng có unit bị xếp trùng hoặc thiếu.",
-        "Kiểm tra lại dữ liệu đầu vào (số tiết môn học, số unit).",
+        "Không xếp được các ca học: {owners} (không còn ô ngày, tiết, phòng nào hợp lệ).",
+        "Kiểm tra loại phòng, sức chứa phòng và các tiết được phép của những ca học này.",
     ),
     "room_no_overlap": (
-        "Không đủ phòng học để tránh trùng lịch trong cùng một tiết.",
-        "Thêm phòng học hoặc giảm số buổi học cần xếp.",
+        "Phòng {owners} không đủ tiết để xếp hết các ca học cần dùng, nên bị trùng giờ.",
+        "Thêm phòng cùng loại hoặc giảm số tiết dùng các phòng này.",
     ),
     "teacher_no_overlap": (
-        "Một giáo viên bị trùng lịch dạy trong cùng một tiết.",
-        "Giảm tải cho giáo viên hoặc thêm giáo viên mới.",
+        "Giáo viên {owners} bị dạy trùng giờ: số tiết được giao vượt số tiết có thể xếp.",
+        "Giảm số tiết của giáo viên này hoặc phân công thêm giáo viên.",
     ),
     "class_no_overlap": (
-        "Một lớp bị trùng lịch học trong cùng một tiết.",
-        "Kiểm tra lại phân bổ môn học cho lớp hoặc giảm số tiết.",
+        "Lớp {owners} bị học trùng giờ: số tiết của lớp vượt số tiết có thể xếp.",
+        "Giảm số tiết của lớp hoặc mở thêm ngày, tiết học.",
     ),
     "max_consecutive_periods": (
-        "Quy định giới hạn số tiết liên tiếp bị vi phạm (ví dụ: lớp học quá 2 tiết liên tục).",
-        "Điều chỉnh lại số tiết mỗi ngày hoặc tăng giới hạn liên tiếp.",
+        "Lớp {owners} không xếp vừa vì quy tắc giới hạn số tiết học liên tiếp.",
+        "Giảm số tiết của lớp trong tuần hoặc nới giới hạn tiết liên tiếp.",
     ),
 }
 
 _UNKNOWN = (
-    "Nhóm ràng buộc '{g}' xung đột với các ràng buộc khác.",
-    "Liên hệ nhóm phát triển để kiểm tra nhóm ràng buộc này.",
+    "Nhóm ràng buộc '{kind}' ({owners}) mâu thuẫn với các ràng buộc khác.",
+    "Liên hệ nhóm phát triển để kiểm tra nhóm này.",
 )
 
 
-class DiagnoseInfeasibility:
-    def __init__(self, diagnoser: InfeasibilityDiagnoser) -> None:
-        self._diagnoser = diagnoser
+def split_group(group: str) -> tuple[str, str]:
+    kind, _, owner = group.partition(":")
+    return kind, owner
 
-    def execute(
-        self,
-        offerings: Iterable[OfferingInfo],
-        regular_room_count: int,
-        design_room_count: int = 1,
-    ) -> DiagnosisReport:
-        issues = precheck(offerings, regular_room_count, design_room_count)
-        if issues:
-            return DiagnosisReport(issues=tuple(issues), source="precheck")
 
-        groups = self._diagnoser.conflicting_groups()
-        if not groups:
-            return DiagnosisReport(issues=(), source="none")
-
-        translated = []
-        for g in groups:
-            msg, hint = GROUP_MESSAGES.get(g, (_UNKNOWN[0].format(g=g), _UNKNOWN[1]))
-            translated.append(Issue(code=g, message=msg, suggestion=hint))
-        return DiagnosisReport(issues=tuple(translated), source="solver")
+def describe_conflict_groups(groups: Iterable[str]) -> DiagnosisReport:
+    """Gộp các nhóm xung đột theo loại và dịch sang tiếng Việt."""
+    owners_by_kind: dict[str, list[str]] = defaultdict(list)
+    for group in groups:
+        kind, owner = split_group(group)
+        owners_by_kind[kind].append(owner or "(tất cả)")
+    if len(owners_by_kind) > 1:
+        # "Mỗi ca học được xếp đúng một lần" luôn nằm trong lõi khi có xung đột tài nguyên, nên
+        # chỉ báo riêng khi không còn nhóm nào khác (ca học không có ô hợp lệ).
+        owners_by_kind.pop("each_unit_once", None)
+    issues = []
+    for kind, owners in sorted(owners_by_kind.items()):
+        template, suggestion = KIND_MESSAGES.get(kind, _UNKNOWN)
+        shown = ", ".join(sorted(owners)[:MAX_OWNERS_SHOWN])
+        if len(owners) > MAX_OWNERS_SHOWN:
+            shown += f" và {len(owners) - MAX_OWNERS_SHOWN} mục khác"
+        issues.append(
+            Issue(
+                code=kind, message=template.format(owners=shown, kind=kind), suggestion=suggestion
+            )
+        )
+    return DiagnosisReport(issues=tuple(issues), source="solver" if issues else "none")

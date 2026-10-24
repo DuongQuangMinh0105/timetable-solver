@@ -3,7 +3,7 @@ from typing import Any
 
 from timetable.application.ports.solver import SolverPort
 from timetable.domain.entities import Problem
-from timetable.domain.rules.soft_constraints import W_G316, W_ROOM, W_SAT
+from timetable.domain.rules.soft_constraints import parse_soft_weights
 from timetable.infrastructure.solver.cpsat_solver import CpSatSolver
 from timetable.infrastructure.solver.encoder import ConstraintEncoder
 from timetable.infrastructure.solver.soft_adapter import SoftObjectiveApplier
@@ -15,21 +15,9 @@ MBA_ROOM_ID = "G316"
 MBA_ROOM_TYPE = "mba"  # môn có required_room_type này là môn MBA
 
 
-def _weight(config: dict[str, Any], key: str, default: int) -> int:
-    value = config.get(key, default)
-    if isinstance(value, bool) or not isinstance(value, int | float) or value != int(value):
-        raise ValueError(f"soft_weights.{key} phải là số nguyên, nhận được {value!r}")
-    return int(value)
-
-
 def soft_weights_from_dict(data: dict[str, Any]) -> tuple[int, int, int]:
     """Đọc `soft_weights` thành (room, sat, g316); thiếu khóa nào thì dùng mặc định."""
-    config = data.get("soft_weights", {})
-    return (
-        _weight(config, "room_stability", W_ROOM),
-        _weight(config, "avoid_saturday", W_SAT),
-        _weight(config, "reserve_mba_room", W_G316),
-    )
+    return parse_soft_weights(data.get("soft_weights", {}))
 
 
 def build_default_solver(

@@ -95,3 +95,40 @@ def test_request_accepts_current_constraint_config_version() -> None:
 def test_request_rejects_unknown_constraint_config_version() -> None:
     with pytest.raises(ValidationError, match="constraint_config_version"):
         SolveRequest.model_validate(_sample_request(constraint_config_version="99.0"))
+
+
+@pytest.mark.parametrize(
+    "case,soft_weights",
+    [
+        pytest.param("negative", {"avoid_saturday": -1}, id="negative"),
+        pytest.param("fractional", {"avoid_saturday": 1.5}, id="fractional"),
+        pytest.param("whole-float", {"avoid_saturday": 1.0}, id="whole-float"),
+        pytest.param("numeric-string", {"avoid_saturday": "1"}, id="numeric-string"),
+        pytest.param("boolean", {"avoid_saturday": True}, id="boolean"),
+        pytest.param("unsupported-key", {"not_a_weight": 1}, id="unsupported-key"),
+    ],
+)
+def test_soft_weights_reject_invalid_values_and_keys(
+    case: str,
+    soft_weights: dict[str, int | float | bool],
+) -> None:
+    with pytest.raises(ValidationError):
+        SolveRequest.model_validate(_sample_request(soft_weights=soft_weights))
+
+
+def test_soft_weights_accept_supported_nonnegative_integers() -> None:
+    request = SolveRequest.model_validate(
+        _sample_request(
+            soft_weights={
+                "room_stability": 0,
+                "avoid_saturday": 10,
+                "reserve_mba_room": 2,
+            }
+        )
+    )
+
+    assert request.soft_weights == {
+        "room_stability": 0,
+        "avoid_saturday": 10,
+        "reserve_mba_room": 2,
+    }

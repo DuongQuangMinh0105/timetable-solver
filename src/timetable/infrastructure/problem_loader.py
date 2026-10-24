@@ -16,7 +16,7 @@ from timetable.domain.entities import (
     Teacher,
     TimeGrid,
 )
-from timetable.domain.rules.soft_constraints import W_G316, W_ROOM, W_SAT  # THÊM IMPORT NÀY
+from timetable.domain.rules.soft_constraints import parse_soft_weights
 from timetable.domain.services.unit_consistency import check_units_match_courses
 from timetable.domain.services.unit_splitter import lesson_units_for_course
 
@@ -49,14 +49,10 @@ def problem_from_dict(data: dict[str, Any]) -> Problem:
     constraints = data.get("constraints", {})
     block_starts = constraints.get("block_starts")
 
-    # --- THÊM ĐOẠN XỬ LÝ SOFT WEIGHTS ---
-    weights_dict = data.get("soft_weights", {})
-    soft_weights = (
-        weights_dict.get("room_stability", W_ROOM),
-        weights_dict.get("avoid_saturday", W_SAT),
-        weights_dict.get("reserve_mba_room", W_G316),
-    )
-    # -------------------------------------
+    try:
+        soft_weights = parse_soft_weights(data.get("soft_weights", {}))
+    except ValueError as exc:
+        raise InvalidProblemError(str(exc)) from exc
 
     problem = Problem(
         rooms=tuple(

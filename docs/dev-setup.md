@@ -29,8 +29,13 @@ uv run alembic upgrade head
 uv run ruff check .
 uv run ruff format --check .
 uv run mypy
-uv run pytest
+uv run pytest --cov
 ```
+
+`--cov` in độ phủ test theo từng file và báo lỗi nếu tổng dưới ngưỡng `fail_under` trong `pyproject.toml`
+(hiện 90%; đo đầy đủ khi có Postgres và Redis được đo khoảng 97%). Test `tests/integration/test_solve_api_e2e.py`
+cần thêm Redis (`docker compose up -d redis`, `REDIS_URL` mặc định `redis://localhost:6379/0`).
+Không hạ ngưỡng để cho CI qua: hãy thêm test.
 
 Xong thì dọn: `Remove-Item Env:DATABASE_URL` và `docker compose down`.
 
@@ -38,11 +43,14 @@ Trước khi mở Pull Request, chạy `uv run pre-commit run --all-files` cho �
 
 ## Chạy bằng Docker Compose
 
+API yêu cầu biến `API_KEY`. Đặt khóa local trước khi chạy:
+
 ```powershell
+$env:API_KEY = Read-Host "Nhập API_KEY local"
 make up
 ```
 
-Nếu không có `make`, dùng `docker compose up --build`. Chạy nền: `docker compose up -d --build`.
+Nếu không có `make`, dùng `docker compose up -d --build` để chạy nền và tiếp tục ở terminal hiện tại.
 
 | Dịch vụ | Mô tả | Địa chỉ |
 |---|---|---|
@@ -61,16 +69,28 @@ Dừng bằng `make down` (hoặc `docker compose down`), xem log bằng `make l
 
 Với compose đang chạy, có hai cách. Cả hai đều chạy bộ giải CP-SAT thật, có ràng buộc mềm (tránh thứ Bảy, một phòng cho mỗi môn, để dành G316 cho MBA).
 
-**Cách 1: gửi bài toán qua API.** API lưu input, tạo job và tự chạy worker (tiến trình con trong container `api`):
+**Cách 1: gửi bài toán qua API.** Compose chạy worker riêng đọc job từ Redis. Gửi khóa trong header:
 
 ```powershell
-curl.exe -X POST http://localhost:8000/solve -H "Content-Type: application/json" --data-binary "@docs/schema/input.sample.json"
+$headers = @{ "X-API-Key" = $env:API_KEY }
+$payload = Get-Content -Raw docs/schema/api-demo.sample.json
+$job = Invoke-RestMethod -Method Post -Uri http://localhost:8000/solve `
+  -Headers $headers -ContentType "application/json" -Body $payload
 ```
 
-Kết quả trả về mã 202 kèm `job_id`. Chờ vài giây rồi xem trạng thái:
+API trả HTTP 202 và `job_id`. Theo dõi trạng thái và lấy kết quả qua API:
 
 ```powershell
-docker compose exec postgres psql -U timetable -d timetable -c "select id, status, result_ref from jobs order by id desc limit 3;"
+$id = $job.job_id
+$deadline = (Get-Date).AddMinutes(2)
+do {
+  $state = Invoke-RestMethod -Uri "http://localhost:8000/jobs/$id" -Headers $headers
+  if ($state.status -in @("DONE", "FAILED")) { break }
+  Start-Sleep -Seconds 1
+} while ((Get-Date) -lt $deadline)
+if ($state.status -ne "DONE") { throw "Job ended with status $($state.status)" }
+$result = Invoke-RestMethod -Uri "http://localhost:8000/jobs/$id/result" -Headers $headers
+$result
 ```
 
 **Cách 2: tạo job mẫu rồi chạy worker bằng tay:**
@@ -83,7 +103,7 @@ docker compose run --rm -e JOB_ID=$id worker
 
 `seed_job.py` nhận thêm đường dẫn file input (mặc định `docs/schema/input.sample.json`).
 
-Kiểm tra kết quả (thay `<id>` bằng `job_id` ở cách 1, hoặc dùng `$id` ở cách 2):
+Kiểm tra file kết quả ở storage chỉ dành cho cách 2 (thay `<id>` bằng `$id`):
 
 ```powershell
 $r = Get-Content data\storage\jobs\<id>\result.json -Raw -Encoding utf8 | ConvertFrom-Json; $r.status; $r.objective; $r.assignments.Count
@@ -111,7 +131,7 @@ Cấu trúc `result.json`:
 - `objective` và `cost_terms` là điểm phạt mềm. Trọng số lấy từ `soft_weights` trong input (`room_stability`, `avoid_saturday`, `reserve_mba_room`).
 - Không có lời giải (`INFEASIBLE`, `UNKNOWN`) vẫn là kết quả hợp lệ, job `completed`. Lịch vi phạm ràng buộc cứng thì job `failed` và không có `result.json`, xem lý do trong log: `docker compose logs api`.
 
-Hiện chưa có endpoint xem trạng thái hay kết quả job.
+Để chạy kịch bản demo API tự động với dữ liệu nhỏ, xem [docs/demo-api.md](demo-api.md).
 
 ## Chạy ở máy, không dùng Docker
 

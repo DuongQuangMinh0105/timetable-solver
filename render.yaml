@@ -12,6 +12,8 @@ services:
     envVars:
       - key: DATABASE_URL
         sync: false # nhập chuỗi kết nối Neon trong Dashboard, KHÔNG ghi vào repo
+      - key: API_KEY
+        sync: false # khóa API cho /solve và /jobs, nhập trong Dashboard, KHÔNG ghi vào repo
       - key: STORAGE_BACKEND
         value: postgres
       - key: JOB_DISPATCHER

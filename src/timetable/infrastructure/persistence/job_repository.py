@@ -1,6 +1,7 @@
+from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session, sessionmaker
 
 from timetable.domain.entities.job import Job, JobStatus
@@ -47,7 +48,126 @@ class JobRepository(JobRepositoryPort):
             model.input_ref = job.input_ref
             model.result_ref = job.result_ref
             model.error_message = job.error_message
+            model.started_at = job.started_at
+            model.heartbeat_at = job.heartbeat_at
             session.commit()
+
+    def claim_queued_job(self, job_id: UUID) -> Job | None:
+        """Atomically claim a queued job for processing."""
+        now = datetime.now(UTC)
+
+        with self._session_factory() as session:
+            statement = (
+                update(JobModel)
+                .where(
+                    JobModel.id == job_id,
+                    JobModel.status == JobStatus.QUEUED.value,
+                )
+                .values(
+                    status=JobStatus.RUNNING.value,
+                    started_at=now,
+                    heartbeat_at=now,
+                    error_message=None,
+                )
+                .returning(JobModel)
+            )
+            model = session.scalars(statement).one_or_none()
+            session.commit()
+
+            if model is None:
+                return None
+
+            return self._to_entity(model)
+
+    def list_queued_jobs(
+        self,
+        limit: int = 100,
+        after_id: UUID | None = None,
+    ) -> list[Job]:
+        """Return a bounded page of queued jobs after the given UUID."""
+        if limit < 1:
+            raise ValueError("limit must be greater than zero.")
+
+        with self._session_factory() as session:
+            statement = select(JobModel).where(JobModel.status == JobStatus.QUEUED.value)
+
+            if after_id is not None:
+                statement = statement.where(JobModel.id > after_id)
+
+            statement = statement.order_by(JobModel.id).limit(limit)
+            models = session.scalars(statement).all()
+
+            return [self._to_entity(model) for model in models]
+
+    def touch_heartbeat(self, job_id: UUID) -> bool:
+        """Update heartbeat only while the job is running."""
+        now = datetime.now(UTC)
+
+        with self._session_factory() as session:
+            statement = (
+                update(JobModel)
+                .where(
+                    JobModel.id == job_id,
+                    JobModel.status == JobStatus.RUNNING.value,
+                )
+                .values(heartbeat_at=now)
+                .returning(JobModel.id)
+            )
+            updated_id = session.scalar(statement)
+            session.commit()
+
+            return updated_id is not None
+
+    def list_stale_running_jobs(
+        self,
+        cutoff: datetime,
+        limit: int = 100,
+    ) -> list[Job]:
+        """List running jobs whose heartbeat is older than cutoff."""
+        if limit < 1:
+            raise ValueError("limit must be greater than zero.")
+
+        with self._session_factory() as session:
+            statement = (
+                select(JobModel)
+                .where(
+                    JobModel.status == JobStatus.RUNNING.value,
+                    JobModel.heartbeat_at.is_not(None),
+                    JobModel.heartbeat_at < cutoff,
+                )
+                .order_by(JobModel.heartbeat_at, JobModel.id)
+                .limit(limit)
+            )
+            models = session.scalars(statement).all()
+
+            return [self._to_entity(model) for model in models]
+
+    def fail_stale_running_job(
+        self,
+        job_id: UUID,
+        cutoff: datetime,
+        error_message: str,
+    ) -> bool:
+        """Atomically fail a still-stale running job."""
+        with self._session_factory() as session:
+            statement = (
+                update(JobModel)
+                .where(
+                    JobModel.id == job_id,
+                    JobModel.status == JobStatus.RUNNING.value,
+                    JobModel.heartbeat_at.is_not(None),
+                    JobModel.heartbeat_at < cutoff,
+                )
+                .values(
+                    status=JobStatus.FAILED.value,
+                    error_message=error_message,
+                )
+                .returning(JobModel.id)
+            )
+            updated_id = session.scalar(statement)
+            session.commit()
+
+            return updated_id is not None
 
     @staticmethod
     def _to_model(job: Job) -> JobModel:
@@ -58,6 +178,8 @@ class JobRepository(JobRepositoryPort):
             input_ref=job.input_ref,
             result_ref=job.result_ref,
             error_message=job.error_message,
+            started_at=job.started_at,
+            heartbeat_at=job.heartbeat_at,
         )
 
     @staticmethod
@@ -69,4 +191,6 @@ class JobRepository(JobRepositoryPort):
             input_ref=model.input_ref,
             result_ref=model.result_ref,
             error_message=model.error_message,
+            started_at=model.started_at,
+            heartbeat_at=model.heartbeat_at,
         )

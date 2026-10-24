@@ -4,8 +4,8 @@ from typing import cast
 import pytest
 from pydantic import ValidationError
 
-from timetable.application.dto.solve import SolveResult, SolveStatus
-from timetable.domain.entities import Assignment, Timetable
+from timetable.application.dto.solve import SolveOptions, SolveResult, SolveStatus
+from timetable.domain.entities import Assignment, Problem, Timetable
 from timetable.infrastructure.solver.cpsat_solver import CpSatSolver
 from timetable.infrastructure.solver.handler import create_solver_handler
 
@@ -46,10 +46,14 @@ VALID_PAYLOAD = {
 class FakeSolver:
     def __init__(self, result: SolveResult) -> None:
         self.result = result
-        self.received_problem = None
-        self.received_options = None
+        self.received_problem: Problem | None = None
+        self.received_options: SolveOptions | None = None
 
-    def solve(self, problem, options) -> SolveResult:
+    def solve(
+        self,
+        problem: Problem,
+        options: SolveOptions,
+    ) -> SolveResult:
         self.received_problem = problem
         self.received_options = options
         return self.result
@@ -89,6 +93,7 @@ def test_handler_serializes_successful_result() -> None:
         }
     ]
     assert fake_solver.received_problem is not None
+    assert fake_solver.received_options is not None
     assert fake_solver.received_options.time_limit_s == 1.0
 
 
@@ -101,7 +106,10 @@ def test_handler_rejects_invalid_json() -> None:
 
 def test_handler_rejects_invalid_request_schema() -> None:
     handler = create_solver_handler()
-    payload = {**VALID_PAYLOAD, "grid": {"days": 0, "periods": 2, "allowed_periods": [0]}}
+    payload = {
+        **VALID_PAYLOAD,
+        "grid": {"days": 0, "periods": 2, "allowed_periods": [0]},
+    }
     data = json.dumps(payload).encode("utf-8")
 
     with pytest.raises(ValidationError):

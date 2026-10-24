@@ -21,6 +21,16 @@ class ModelContext:
     penalties: list[tuple[int, cp_model.IntVar]] = field(default_factory=list)
     # Từng số hạng của hàm mục tiêu (room, sat, g316...), để giải thích điểm phạt của một lịch.
     cost_terms: dict[str, object] = field(default_factory=dict)
+    # Chế độ chẩn đoán vô nghiệm: khác None thì mỗi nhóm ràng buộc cứng gắn vào một literal
+    # (`only_enforce_if`) để CP-SAT trả về nhóm xung đột. Tên nhóm có dạng "loại:chủ thể".
+    group_literals: dict[str, cp_model.IntVar] | None = None
+
+    def group_literal(self, group: str) -> cp_model.IntVar:
+        """Literal bật/tắt nhóm `group` (tạo khi cần). Chỉ gọi ở chế độ chẩn đoán."""
+        assert self.group_literals is not None
+        if group not in self.group_literals:
+            self.group_literals[group] = self.model.new_bool_var(f"grp_{group}")
+        return self.group_literals[group]
 
 
 class ConstraintEncoder(Protocol):

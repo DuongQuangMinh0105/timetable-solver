@@ -12,6 +12,7 @@ from timetable.application.use_cases.run_job import JobHandler
 from timetable.application.use_cases.solve_timetable import SolveOutcome, SolveTimetable
 from timetable.domain.constraint_config import CONSTRAINT_CONFIG_VERSION
 from timetable.domain.entities import Problem
+from timetable.domain.services.capacity_precheck import capacity_issues
 from timetable.infrastructure.problem_loader import problem_from_dict, solve_options_from_dict
 
 logger = logging.getLogger(__name__)
@@ -91,6 +92,20 @@ def outcome_to_dict(problem: Problem, outcome: SolveOutcome) -> dict[str, Any]:
             {"rule_id": v.rule_id, "description": v.description, "severity": v.severity}
             for v in outcome.violations
         ],
+        "diagnosis": _diagnosis_to_dict(outcome),
+    }
+
+
+def _diagnosis_to_dict(outcome: SolveOutcome) -> dict[str, Any] | None:
+    report = outcome.diagnosis
+    if report is None:
+        return None
+    return {
+        "source": report.source,
+        "issues": [
+            {"code": i.code, "message": i.message, "suggestion": i.suggestion}
+            for i in report.issues
+        ],
     }
 
 
@@ -115,7 +130,7 @@ def make_solve_handler(solver_factory: SolverFactory, checker: TimetableChecker)
             requested.time_limit_s,
         )
         solver = solver_factory(problem, payload)
-        outcome = SolveTimetable(solver, checker).execute(problem, options)
+        outcome = SolveTimetable(solver, checker, capacity_issues).execute(problem, options)
         if outcome.violations:
             summary = "; ".join(f"{v.rule_id}: {v.description}" for v in outcome.violations[:5])
             raise InvalidTimetableError(f"{len(outcome.violations)} vi phạm. {summary}")
