@@ -6,33 +6,41 @@ from timetable.application.dto.diagnosis_report import DiagnosisReport
 from timetable.application.ports.infeasibility_diagnoser import InfeasibilityDiagnoser
 from timetable.domain.services.precheck import Issue, OfferingInfo, precheck
 
-# Group names đã chốt với P1 (theo docs/diagnosis.md)
+# Group names must be agreed with P1 (they name the enforcement literals).
 GROUP_MESSAGES: dict[str, tuple[str, str]] = {
-    "each_unit_once": (
-        "Mỗi đơn vị học (unit) phải được xếp đúng một lần, nhưng có unit bị xếp trùng hoặc thiếu.",
-        "Kiểm tra lại dữ liệu đầu vào (số tiết môn học, số unit).",
+    "room_clash": (
+        "There are not enough rooms to avoid double-booking in the same period.",
+        "Add rooms or reduce the number of sessions.",
     ),
-    "room_no_overlap": (
-        "Không đủ phòng học để tránh trùng lịch trong cùng một tiết.",
-        "Thêm phòng học hoặc giảm số buổi học cần xếp.",
+    "teacher_clash": (
+        "A teacher is double-booked in the same period.",
+        "Reduce teacher load or add teachers.",
     ),
-    "teacher_no_overlap": (
-        "Một giáo viên bị trùng lịch dạy trong cùng một tiết.",
-        "Giảm tải cho giáo viên hoặc thêm giáo viên mới.",
+    "teacher_availability": (
+        "Teacher availability is too restrictive.",
+        "Open more available time slots for teachers.",
     ),
-    "class_no_overlap": (
-        "Một lớp bị trùng lịch học trong cùng một tiết.",
-        "Kiểm tra lại phân bổ môn học cho lớp hoặc giảm số tiết.",
+    "mba_room": (
+        "MBA offerings must use G316, but G316 does not have enough periods.",
+        "Reduce MBA sessions or open more time slots.",
     ),
-    "max_consecutive_periods": (
-        "Quy định giới hạn số tiết liên tiếp bị vi phạm (ví dụ: lớp học quá 2 tiết liên tục).",
-        "Điều chỉnh lại số tiết mỗi ngày hoặc tăng giới hạn liên tiếp.",
+    "design_room": (
+        "Design offerings must use G313, but G313 does not have enough periods.",
+        "Reduce Design sessions or open more time slots.",
+    ),
+    "no_period_7_8": (
+        "The rule forbidding periods 7 and 8 conflicts with other constraints.",
+        "Compare the number of sessions to schedule with the usable periods.",
+    ),
+    "consecutive_limit": (
+        "The rule limiting consecutive periods conflicts with other constraints.",
+        "Review the number of sessions per day for each offering.",
     ),
 }
 
 _UNKNOWN = (
-    "Nhóm ràng buộc '{g}' xung đột với các ràng buộc khác.",
-    "Liên hệ nhóm phát triển để kiểm tra nhóm ràng buộc này.",
+    "Constraint group '{g}' conflicts with other constraints.",
+    "Contact the development team to investigate this group.",
 )
 
 
