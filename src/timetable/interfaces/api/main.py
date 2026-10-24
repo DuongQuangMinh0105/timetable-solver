@@ -1,3 +1,4 @@
+import os
 from typing import Annotated
 from uuid import UUID
 
@@ -34,8 +35,12 @@ app = FastAPI(
     response_description="API health status",
 )
 def health_check() -> dict[str, str]:
-    """Return the API health status."""
-    return {"status": "healthy"}
+    """Return the API health status (and the deployed commit when running on Render)."""
+    health = {"status": "healthy"}
+    commit = os.getenv("RENDER_GIT_COMMIT")
+    if commit:
+        health["commit"] = commit
+    return health
 
 
 @app.post(

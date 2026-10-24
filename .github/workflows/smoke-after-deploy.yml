@@ -1,0 +1,32 @@
+name: Smoke test sau deploy
+
+# Sau khi CI trên main xanh, Render tự deploy bản mới (autoDeployTrigger: checksPass).
+# Workflow này chờ /health báo đúng commit vừa merge rồi mới chạy smoke test, nên không thử nhầm bản cũ.
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
+
+concurrency:
+  group: smoke-after-deploy
+  cancel-in-progress: true # có commit mới hơn thì bỏ lượt chờ của commit cũ
+
+jobs:
+  smoke:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - name: Smoke test
+        env:
+          API_KEY: ${{ secrets.STAGING_API_KEY }}
+          STAGING_URL: ${{ secrets.STAGING_URL }}
+          EXPECTED_COMMIT: ${{ github.event.workflow_run.head_sha }}
+        run: >
+          python3 scripts/smoke_test.py "$STAGING_URL"
+          --expect-commit "$EXPECTED_COMMIT"
+          --wake-timeout 1500 --timeout 600

@@ -38,7 +38,11 @@ class _FakeApi(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
         config: dict[str, Any] = self.server.config  # type: ignore[attr-defined]
         if self.path == "/health":
-            self._send(200, '{"status":"healthy"}')
+            health = {"status": "healthy"}
+            commits: list[str] = config.get("commits", [])
+            if commits:
+                health["commit"] = commits.pop(0) if len(commits) > 1 else commits[0]
+            self._send(200, json.dumps(health))
         elif not self._authorized():
             self._send(401, '{"detail":"Invalid or missing API key"}')
         elif self.path.endswith("/result"):
@@ -89,7 +93,10 @@ def input_file(tmp_path: Path) -> Path:
 
 
 def _run(
-    base_url: str, input_file: Path, api_key: str | None = API_KEY
+    base_url: str,
+    input_file: Path,
+    api_key: str | None = API_KEY,
+    extra: tuple[str, ...] = (),
 ) -> subprocess.CompletedProcess[str]:
     env = {k: v for k, v in os.environ.items() if k != "API_KEY"}
     if api_key is not None:
@@ -107,6 +114,7 @@ def _run(
             "30",
             "--poll",
             "0.2",
+            *extra,
         ],
         capture_output=True,
         text=True,
@@ -115,6 +123,31 @@ def _run(
         env=env,
         check=False,
     )
+
+
+def test_waits_until_health_reports_expected_commit(fake_api: Fake, input_file: Path) -> None:
+    fake_api[1]["commits"] = ["old", "old", "new"]  # bản cũ vẫn chạy trong lúc Render build bản mới
+
+    result = _run(fake_api[0], input_file, extra=("--expect-commit", "new"))
+
+    assert result.returncode == 0, result.stderr
+    assert "đang chạy đúng commit new" in result.stdout
+
+
+def test_fails_when_deployed_commit_never_matches(fake_api: Fake, input_file: Path) -> None:
+    fake_api[1]["commits"] = ["old"]
+
+    result = _run(fake_api[0], input_file, extra=("--expect-commit", "new"))
+
+    assert result.returncode == 1
+    assert "đang chạy commit old, chờ new" in result.stderr
+
+
+def test_fails_when_health_does_not_report_commit(fake_api: Fake, input_file: Path) -> None:
+    result = _run(fake_api[0], input_file, extra=("--expect-commit", "abc1234"))
+
+    assert result.returncode == 1
+    assert "đang chạy commit không có" in result.stderr
 
 
 def test_passes_when_job_is_done_with_a_schedule(fake_api: Fake, input_file: Path) -> None:

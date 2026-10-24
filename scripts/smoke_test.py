@@ -55,8 +55,23 @@ def request(method: str, url: str, body: bytes | None = None) -> tuple[int, str]
         raise SmokeTestError(f"{method} {url}: {error}") from error
 
 
-def wait_until_healthy(base_url: str, wake_timeout: float, poll: float) -> float:
-    """Gọi /health cho tới khi dịch vụ phản hồi."""
+def _running_commit(health_text: str) -> str:
+    try:
+        commit = json.loads(health_text).get("commit")
+    except (ValueError, AttributeError):
+        return ""
+    return str(commit) if commit else ""
+
+
+def _same_commit(running: str, expected: str) -> bool:
+    running, expected = running.lower(), expected.lower()
+    return bool(running) and (running.startswith(expected) or expected.startswith(running))
+
+
+def wait_until_healthy(
+    base_url: str, wake_timeout: float, poll: float, expect_commit: str | None = None
+) -> float:
+    """Gọi /health cho tới khi dịch vụ phản hồi (và đang chạy đúng commit nếu có yêu cầu)."""
     start = time.monotonic()
     last_error = "chưa có phản hồi"
 
@@ -64,8 +79,14 @@ def wait_until_healthy(base_url: str, wake_timeout: float, poll: float) -> float
         try:
             status, text = request("GET", f"{base_url}/health")
             if status == 200 and "healthy" in text:
-                return time.monotonic() - start
-            last_error = f"HTTP {status}: {text[:200]}"
+                if not expect_commit:
+                    return time.monotonic() - start
+                running = _running_commit(text)
+                if _same_commit(running, expect_commit):
+                    return time.monotonic() - start
+                last_error = f"đang chạy commit {running or 'không có'}, chờ {expect_commit[:7]}"
+            else:
+                last_error = f"HTTP {status}: {text[:200]}"
         except SmokeTestError as error:
             last_error = str(error)
 
@@ -151,6 +172,7 @@ def run(
     wake_timeout: float,
     timeout: float,
     poll: float,
+    expect_commit: str | None = None,
 ) -> None:
 
     base_url = base_url.strip().rstrip("/")
@@ -167,8 +189,10 @@ def run(
     payload = input_path.read_bytes()
     expected_units = len(json.loads(payload).get("lesson_units") or [])
 
-    woke_in = wait_until_healthy(base_url, wake_timeout, poll)
+    woke_in = wait_until_healthy(base_url, wake_timeout, poll, expect_commit)
     print(f"1. /health ok sau {woke_in:.1f}s")
+    if expect_commit:
+        print(f"   đang chạy đúng commit {expect_commit[:7]}")
 
     start = time.monotonic()
     job_id = submit_job(base_url, payload)
@@ -215,10 +239,23 @@ def main() -> int:
         default=DEFAULT_POLL_SECONDS,
         help="Giây giữa các lần hỏi",
     )
+    parser.add_argument(
+        "--expect-commit",
+        default=None,
+        help="Chờ tới khi /health báo đang chạy đúng commit này (dùng sau deploy)",
+    )
+
     args = parser.parse_args()
 
     try:
-        run(args.base_url, args.input, args.wake_timeout, args.timeout, args.poll)
+        run(
+            args.base_url,
+            args.input,
+            args.wake_timeout,
+            args.timeout,
+            args.poll,
+            args.expect_commit,
+        )
     except SmokeTestError as error:
         print(f"SMOKE TEST THẤT BẠI: {error}", file=sys.stderr)
         return 1
