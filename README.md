@@ -56,6 +56,20 @@ Invoke-RestMethod -Uri "http://localhost:8000/jobs/$jobId/result" -Headers $head
 
 Nếu cần chờ worker hoàn tất và kiểm tra lịch mẫu tự động, xem [kịch bản demo API](docs/demo-api.md).
 
+## Giao diện (Streamlit)
+
+Chạy API trước (xem trên), rồi chạy giao diện với cùng `API_KEY`:
+
+```powershell
+$env:API_URL = "http://localhost:8000"
+$env:API_KEY = "<cùng khóa với API>"
+uv run streamlit run src/timetable/interfaces/ui/app.py
+```
+
+Mở `http://localhost:8501`, tải một file Excel (ví dụ `docs/samples/ok_basic.xlsx`) rồi bấm giải. Các file
+`docs/samples/fail_*.xlsx` cố tình sai dữ liệu để xem chẩn đoán vô nghiệm bằng tiếng Việt. Giải thích
+mô hình: [docs/model-explained.md](docs/model-explained.md).
+
 ## Kiến trúc (Clean Architecture)
 
 src/timetable/

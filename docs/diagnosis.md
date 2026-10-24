@@ -21,6 +21,7 @@ Dạng `loại:chủ thể`. Bảng loại và thông báo tiếng Việt nằm 
 
 | Loại | Chủ thể | Nghĩa |
 |---|---|---|
+| `no_valid_room` (kiểm tra nhanh) | danh sách môn | Không có phòng nào hợp lệ cho các môn đó (thiếu phòng đúng loại hoặc sức chứa không đủ) |
 | `each_unit_once` | id ca học | Ca học không còn ô hợp lệ (loại phòng, sức chứa, tiết cho phép). Chỉ báo riêng khi không có nhóm khác |
 | `room_no_overlap` | id phòng | Phòng không đủ tiết cho các ca cần dùng |
 | `teacher_no_overlap` | id giáo viên | Giáo viên được giao quá nhiều tiết |
@@ -37,6 +38,9 @@ if ctx.group_literals is not None:
 ```
 Biến phụ định nghĩa (ví dụ `busy`) không gắn literal. Đặt thêm thông báo cho loại mới vào
 `KIND_MESSAGES`, nếu không sẽ rơi vào câu chung "nhóm ... mâu thuẫn".
+
+## Hiển thị
+`GET /jobs/{id}/result` trả `diagnosis`. Giao diện Streamlit (`interfaces/ui/diagnosis_view.py`) gọi endpoint này khi job `DONE` và hiện lý do kèm gợi ý sửa khi `INFEASIBLE`. Các file mẫu lỗi để thử nằm ở `docs/samples/`.
 
 ## Định dạng JSON kết quả
 Trường mới `diagnosis` (thêm vào, không đổi trường cũ), `null` khi có lịch hoặc không có lý do:

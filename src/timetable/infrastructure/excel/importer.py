@@ -7,6 +7,7 @@ from openpyxl.utils.exceptions import InvalidFileException
 
 from timetable.application.ports.excel_importer import ExcelImportError
 from timetable.domain.entities import Problem
+from timetable.infrastructure.excel.english_schema import convert, is_english_workbook
 from timetable.infrastructure.generator import (
     ALLOWED_PERIODS,
     MAX_CONSECUTIVE_PERIODS,
@@ -83,11 +84,20 @@ def _check_unique(sheet: str, rows: list[_Row], errors: list[str]) -> set[str]:
 
 
 class OpenpyxlExcelImporter:
+    def __init__(self) -> None:
+        # Cảnh báo của lần đọc gần nhất (ví dụ cột chưa được áp dụng vào mô hình).
+        self.warnings: list[str] = []
+
     def load_data(self, path: Path) -> dict[str, Any]:
         try:
             wb = load_workbook(path, data_only=True)
         except (OSError, InvalidFileException, zipfile.BadZipFile, KeyError) as exc:
             raise ExcelImportError(f"Không đọc được file Excel {path}: {exc}") from exc
+
+        self.warnings = []
+        if is_english_workbook(wb.sheetnames) and SHEET_ROOMS not in wb.sheetnames:
+            data, self.warnings = convert(wb)
+            return data
 
         errors: list[str] = []
         rooms = _read_sheet(

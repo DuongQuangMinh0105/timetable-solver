@@ -10,6 +10,11 @@ import streamlit as st
 from timetable.application.ports.excel_importer import ExcelImportError
 from timetable.infrastructure.excel.importer import OpenpyxlExcelImporter
 from timetable.interfaces.ui.client import ApiError, SolverApiClient
+from timetable.interfaces.ui.diagnosis_view import (
+    diagnosis_lines,
+    diagnosis_title,
+    needs_diagnosis,
+)
 
 st.set_page_config(
     page_title="Hệ thống Xếp Thời khoá biểu",
@@ -33,6 +38,23 @@ def render_dashboard(result_data: dict[str, Any]) -> None:
     objective = result_data.get("objective", 0)
     assignments = result_data.get("assignments", [])
     violations = result_data.get("violations", [])
+
+    if status == "FAILED":
+        st.error(
+            "Job thất bại (lịch sai ràng buộc cứng hoặc lỗi hệ thống). "
+            "Xem log của worker hoặc thử lại với dữ liệu khác."
+        )
+
+    if needs_diagnosis(result_data):
+        st.error(f"**{diagnosis_title(result_data)}** (trạng thái {status})")
+        lines = diagnosis_lines(result_data)
+        for line in lines:
+            st.markdown(f"- {line}")
+        if not lines:
+            if status == "UNKNOWN":
+                st.info("Bộ giải hết thời gian mà chưa tìm ra lịch. Thử tăng thời gian giải.")
+            else:
+                st.info("Chưa xác định được nhóm ràng buộc gây xung đột.")
 
     # Chia các Tab chức năng
     tab_summary, tab_class, tab_teacher, tab_room = st.tabs(
@@ -130,10 +152,13 @@ def main() -> None:
             path = Path(tmp) / "input.xlsx"
             path.write_bytes(uploaded.getvalue())
             try:
-                payload = OpenpyxlExcelImporter().load_data(path)
+                importer = OpenpyxlExcelImporter()
+                payload = importer.load_data(path)
             except ExcelImportError as exc:
                 st.error(f"Lỗi đọc file Excel đầu vào: {exc}")
                 return
+        for warning in importer.warnings:
+            st.warning(warning)
         try:
             job_id = client.submit(payload)
             st.session_state["job_id"] = job_id
@@ -156,7 +181,10 @@ def main() -> None:
                     placeholder.info(f"Trạng thái tiến trình: **{status}**")
 
                     if client.is_final(status):
-                        st.session_state["result_data"] = info.get("result", info)
+                        if status.upper() == "DONE":
+                            st.session_state["result_data"] = client.job_result(current_job)
+                        else:
+                            st.session_state["result_data"] = {"status": "FAILED", **info}
                         placeholder.empty()
                         break
                     time.sleep(2)

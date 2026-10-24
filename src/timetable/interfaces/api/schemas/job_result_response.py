@@ -22,6 +22,19 @@ class ViolationResponse(BaseModel):
     severity: str
 
 
+class DiagnosisIssueResponse(BaseModel):
+    code: str
+    message: str
+    suggestion: str
+
+
+class DiagnosisResponse(BaseModel):
+    """Lý do vô nghiệm (tiếng Việt): `source` là "precheck" hoặc "solver"."""
+
+    source: str
+    issues: list[DiagnosisIssueResponse]
+
+
 class JobResultResponse(BaseModel):
     constraint_config_version: str
     status: SolveResultStatus
@@ -29,3 +42,4 @@ class JobResultResponse(BaseModel):
     cost_terms: dict[str, int]
     assignments: list[AssignmentResponse]
     violations: list[ViolationResponse]
+    diagnosis: DiagnosisResponse | None = None

@@ -53,7 +53,30 @@ def test_returns_result() -> None:
         "cost_terms": {"room": 0, "sat": 0, "g316": 0},
         "assignments": [],
         "violations": [],
+        "diagnosis": None,
     }
+
+
+def test_result_includes_diagnosis_when_infeasible() -> None:
+    diagnosis = {
+        "source": "precheck",
+        "issues": [
+            {"code": "teacher_capacity", "message": "Giáo viên T1 quá tải.", "suggestion": "x"}
+        ],
+    }
+    response = _call(
+        {
+            "constraint_config_version": "1.0",
+            "status": "INFEASIBLE",
+            "objective": None,
+            "cost_terms": {},
+            "assignments": [],
+            "violations": [],
+            "diagnosis": diagnosis,
+        }
+    )
+    assert response.status_code == 200
+    assert response.json()["diagnosis"] == diagnosis
 
 
 def test_unknown_job_is_404() -> None:
