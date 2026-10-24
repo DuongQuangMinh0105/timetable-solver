@@ -59,6 +59,28 @@ def test_is_final() -> None:
     assert not SolverApiClient.is_final("QUEUED")
 
 
+def test_timeout_becomes_a_friendly_api_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    def fake_urlopen(request: Any, timeout: float) -> _Response:
+        raise TimeoutError("The read operation timed out")
+
+    monkeypatch.setattr(client_module.urllib.request, "urlopen", fake_urlopen)
+    with pytest.raises(ApiError, match="không phản hồi"):
+        SolverApiClient("https://x.onrender.com", "k").submit({})
+
+
+def test_timeout_is_configurable(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen: dict[str, float] = {}
+
+    def fake_urlopen(request: Any, timeout: float) -> _Response:
+        seen["timeout"] = timeout
+        return _Response({"job_id": "abc"})
+
+    monkeypatch.setenv("API_TIMEOUT_S", "200")
+    monkeypatch.setattr(client_module.urllib.request, "urlopen", fake_urlopen)
+    SolverApiClient("http://api", "k").submit({})
+    assert seen["timeout"] == 200.0
+
+
 def test_job_result_calls_the_result_endpoint(monkeypatch: pytest.MonkeyPatch) -> None:
     def fake_urlopen(request: Any, timeout: float) -> _Response:
         assert request.full_url == "http://api:8000/jobs/abc/result"
