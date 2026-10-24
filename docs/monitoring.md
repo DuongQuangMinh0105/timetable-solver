@@ -6,6 +6,7 @@
 | Deploy lỗi | Render gửi email (mục Notifications đã bật cho deploy lỗi) |
 | Staging hỏng (`/health`, `/solve`, job, lịch) | Workflow `Smoke test staging` chạy mỗi 6 giờ trên GitHub Actions; thất bại thì GitHub gửi thông báo |
 | Job lỗi lẻ tẻ | Chưa có cảnh báo riêng, kiểm tra bằng log hoặc truy vấn bên dưới |
+| Bản mới vừa deploy bị hỏng | Workflow `Smoke test sau deploy`: sau khi CI trên `main` xanh, chờ `/health` báo đúng commit vừa merge rồi chạy smoke test. Deploy không lên hoặc `/solve` hỏng thì workflow thất bại |
 
 Để nhận thông báo, bật mục **Actions** trong GitHub, Settings, Notifications. Chạy tay: tab Actions,
 **Smoke test staging**, **Run workflow**.

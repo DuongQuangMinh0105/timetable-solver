@@ -26,6 +26,7 @@ thể mất khoảng một phút, script tự chờ tối đa 120 giây. Script 
 - Deploy tay: Render, dịch vụ, **Manual Deploy**, **Deploy latest commit**.
 - Migration (`alembic upgrade head`) tự chạy mỗi lần dịch vụ khởi động.
 - Deploy lỗi thì bản cũ vẫn chạy (Render chỉ chuyển lưu lượng khi bản mới qua `/health`).
+- Sau mỗi lần merge vào main, workflow Smoke test sau deploy tự kiểm tra bản mới (xem tab Actions). Có thể mất 5 đến 15 phút vì phải chờ Render build.
 
 ## Xem log
 
