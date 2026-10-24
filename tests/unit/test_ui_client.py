@@ -57,3 +57,12 @@ def test_unreachable_api_raises_api_error(monkeypatch: pytest.MonkeyPatch) -> No
 def test_is_final() -> None:
     assert SolverApiClient.is_final("done")
     assert not SolverApiClient.is_final("QUEUED")
+
+
+def test_job_result_calls_the_result_endpoint(monkeypatch: pytest.MonkeyPatch) -> None:
+    def fake_urlopen(request: Any, timeout: float) -> _Response:
+        assert request.full_url == "http://api:8000/jobs/abc/result"
+        return _Response({"status": "INFEASIBLE", "assignments": [], "diagnosis": None})
+
+    monkeypatch.setattr(client_module.urllib.request, "urlopen", fake_urlopen)
+    assert SolverApiClient("http://api:8000", "k").job_result("abc")["status"] == "INFEASIBLE"

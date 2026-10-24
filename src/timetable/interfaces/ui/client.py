@@ -42,6 +42,11 @@ class SolverApiClient:
         result: dict[str, Any] = self._request("GET", f"/jobs/{job_id}")
         return result
 
+    def job_result(self, job_id: str) -> dict[str, Any]:
+        """Kết quả đầy đủ (lịch, vi phạm, chẩn đoán) của job đã xong."""
+        result: dict[str, Any] = self._request("GET", f"/jobs/{job_id}/result")
+        return result
+
     @staticmethod
     def is_final(status: str) -> bool:
         return status.upper() in FINAL_STATUSES

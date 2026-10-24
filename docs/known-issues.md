@@ -9,9 +9,9 @@ băng code, **Thấp** = dọn dẹp.
 | # | Vấn đề | Chi tiết | Người xử lý |
 |---|---|---|---|
 | 1 | Chưa có E2E trên staging | `docs/reports/` chỉ có báo cáo cục bộ. Chưa có danh sách lỗi theo mức độ, chưa chạy `scripts/smoke_test.py` trên Render | P5, P4 |
-| 2 | Chẩn đoán vô nghiệm đã nối vào solver, cần hoàn thiện | Đã có literal theo nhóm, kiểm tra sức chứa trước khi giải và trường `diagnosis` trong kết quả (xem `docs/diagnosis.md`). Còn: thống nhất và tinh chỉnh thông báo, UI hiển thị `diagnosis`, chẩn đoán `UNKNOWN` | P2, P5 |
+| 2 | Chẩn đoán vô nghiệm: còn tinh chỉnh | Đã nối vào solver, API (`diagnosis`) và UI; có 4 file Excel mẫu lỗi trong `docs/samples/` kèm test. Còn: chẩn đoán `UNKNOWN` (hết giờ) | P2 |
 | 3 | Baseline trọng số đã có, cần đọc thận trọng | `docs/reports/baseline.md`, `hint_benchmark.md` (PR #63): giữ W 5-10-2, hint không giúp. Mỗi cấu hình chạy 1 lần, 30 s, nên chênh lệch nhỏ (20 so với 25) là nhiễu. 50 lớp xem `scale_benchmark.md` | P2 |
-| 5 | Giao diện mới ở mức khung | `interfaces/ui/` có tải Excel, gửi job và xem trạng thái (PR #62); chưa hiển thị lịch kết quả, chưa tải Excel kết quả | P5 |
+| 5 | Giao diện chưa triển khai | UI có tải Excel, xem lịch theo lớp/giáo viên/phòng, tải Excel kết quả và hiện chẩn đoán; chưa có dịch vụ UI trên Render và chưa có hướng dẫn trong README (đã thêm phần chạy cục bộ) | P4, P5 |
 
 ## Trung
 
@@ -38,3 +38,6 @@ băng code, **Thấp** = dọn dẹp.
 - `mypy-report.txt` đã xóa khỏi repo và thêm vào `.gitignore`.
 - Độ phủ test: CI chạy `pytest --cov`, ngưỡng 90% (đo đầy đủ khoảng 97%). Phần chưa phủ chủ yếu là
   vòng lặp của `worker/main.py` và vài nhánh lỗi.
+- Excel: `unavailable_slots` (giáo viên) và `fixed_day`/`fixed_period` (môn) trong mẫu tiếng Anh chưa được đưa vào mô hình; importer bỏ qua và cảnh báo. Giá trị tiết ngoài khoảng bị báo lỗi lúc đọc file.
+- API `GET /jobs/{id}/result` có thêm trường `diagnosis` (null khi có lịch). UI trước đây không gọi endpoint này nên không hiện lịch thật; đã sửa.
+- Tham số solver và trọng số đã chốt: `docs/reports/solver_params.md`. Giải thích mô hình: `docs/model-explained.md`.

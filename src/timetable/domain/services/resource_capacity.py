@@ -45,6 +45,18 @@ def room_capacity_issues(problem: Problem) -> list[Issue]:
     cap = weekly_cells(problem)
     issues: list[Issue] = []
     for room_set in sorted(sets, key=lambda s: (len(s), sorted(s))):
+        if not room_set:
+            courses = sorted({u.course_id for u in problem.lesson_units if not allowed[u.id]})
+            issues.append(
+                Issue(
+                    "no_valid_room",
+                    f"Không có phòng nào phù hợp cho các môn: {', '.join(courses)} "
+                    "(thiếu phòng đúng loại yêu cầu hoặc sức chứa phòng không đủ cho lớp).",
+                    "Thêm phòng đúng loại (ví dụ phòng đặc biệt cho lớp MBA) hoặc kiểm tra "
+                    "loại phòng yêu cầu và sức chứa.",
+                )
+            )
+            continue
         needed = sum(
             u.duration for u in problem.lesson_units if {r.id for r in allowed[u.id]} <= room_set
         )
