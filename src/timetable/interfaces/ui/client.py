@@ -56,6 +56,23 @@ class SolverApiClient:
         result: dict[str, Any] = self._request("GET", f"/jobs/{job_id}/result")
         return result
 
+    def validate_edited(self, job_id: str, rows: list[dict[str, Any]]) -> dict[str, Any]:
+        """Kiểm tra lịch đã sửa tay (không lưu): vi phạm cứng, mềm và điểm phạt."""
+        body = {"assignments": rows}
+        result: dict[str, Any] = self._request("POST", f"/jobs/{job_id}/validate", body)
+        return result
+
+    def save_edited(self, job_id: str, rows: list[dict[str, Any]]) -> dict[str, Any]:
+        """Lưu lịch đã sửa cạnh kết quả gốc (kết quả gốc được giữ nguyên)."""
+        result: dict[str, Any] = self._request(
+            "PUT", f"/jobs/{job_id}/result/edited", {"assignments": rows}
+        )
+        return result
+
+    def get_edited(self, job_id: str) -> dict[str, Any]:
+        result: dict[str, Any] = self._request("GET", f"/jobs/{job_id}/result/edited")
+        return result
+
     @staticmethod
     def is_final(status: str) -> bool:
         return status.upper() in FINAL_STATUSES

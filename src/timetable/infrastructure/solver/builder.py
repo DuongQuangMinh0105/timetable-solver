@@ -11,6 +11,7 @@ from timetable.infrastructure.solver.encoder import (
 from timetable.infrastructure.solver.hard_encoders import (
     ClassNoOverlapEncoder,
     EachUnitOnceEncoder,
+    FixedAssignmentsEncoder,
     MaxConsecutiveEncoder,
     RoomNoOverlapEncoder,
     TeacherNoOverlapEncoder,
@@ -26,6 +27,7 @@ def default_hard_encoders() -> list[ConstraintEncoder]:
         TeacherNoOverlapEncoder(),
         ClassNoOverlapEncoder(),
         MaxConsecutiveEncoder(),
+        FixedAssignmentsEncoder(),
     ]
 
 

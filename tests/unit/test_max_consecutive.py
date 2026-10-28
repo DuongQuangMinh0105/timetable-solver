@@ -92,7 +92,9 @@ def test_forbidden_period_breaks_the_run() -> None:
 
 def test_encoder_adds_constraints_to_the_model() -> None:
     problem = make_problem(three_units_one_class(), grid=one_day_grid(1, 2, 3))
-    without = build_model(problem, default_hard_encoders()[:-1])
+    without = build_model(
+        problem, [e for e in default_hard_encoders() if e.name != "max_consecutive_periods"]
+    )
     with_rule = build_model(problem)
     assert len(with_rule.model.proto.constraints) > len(without.model.proto.constraints)
 

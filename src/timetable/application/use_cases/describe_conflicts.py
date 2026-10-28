@@ -29,6 +29,10 @@ KIND_MESSAGES: dict[str, tuple[str, str]] = {
         "Lớp {owners} bị học trùng giờ: số tiết của lớp vượt số tiết có thể xếp.",
         "Giảm số tiết của lớp hoặc mở thêm ngày, tiết học.",
     ),
+    "fixed_assignments": (
+        "Không giữ được các ca đã khóa: {owners} (ô khóa không hợp lệ hoặc trùng với ca khác).",
+        "Mở khóa các ca này hoặc đổi sang ngày, tiết, phòng khác phù hợp.",
+    ),
     "max_consecutive_periods": (
         "Lớp {owners} không xếp vừa vì quy tắc giới hạn số tiết học liên tiếp.",
         "Giảm số tiết của lớp trong tuần hoặc nới giới hạn tiết liên tiếp.",

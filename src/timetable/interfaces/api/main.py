@@ -4,13 +4,27 @@ from uuid import UUID
 
 from fastapi import Depends, FastAPI, HTTPException, Security, status
 
+from timetable.application.use_cases.edited_result import (
+    EditedResultNotFoundError,
+    GetEditedResult,
+    SaveEditedResult,
+    ValidateEditedResult,
+)
 from timetable.application.use_cases.get_job import GetJob, JobNotFoundError
 from timetable.application.use_cases.get_job_result import GetJobResult, ResultNotReadyError
 from timetable.application.use_cases.submit_solve_job import SubmitSolveJob
 from timetable.interfaces.api.dependencies import (
+    get_get_edited_result,
     get_get_job,
     get_get_job_result,
+    get_save_edited_result,
     get_submit_solve_job,
+    get_validate_edited_result,
+)
+from timetable.interfaces.api.schemas.edited_result import (
+    EditedResultRequest,
+    EditedResultResponse,
+    ValidateResponse,
 )
 from timetable.interfaces.api.schemas.job_response import JobResponse
 from timetable.interfaces.api.schemas.job_result_response import JobResultResponse
@@ -184,4 +198,82 @@ def get_job_result(
     except ResultNotReadyError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail="Result is not ready"
+        ) from exc
+
+
+_COMMON_RESPONSES: dict[int | str, dict[str, object]] = {
+    401: {"description": "API key is missing or invalid"},
+    404: {"description": "Job not found"},
+}
+
+
+def _rows(request: EditedResultRequest) -> list[dict[str, object]]:
+    return [a.model_dump() for a in request.assignments]
+
+
+@app.post(
+    "/jobs/{job_id}/validate",
+    response_model=ValidateResponse,
+    tags=["Jobs"],
+    summary="Validate an edited timetable",
+    description=(
+        "Check a manually edited timetable against the job's problem: hard violations "
+        "and soft penalties. Nothing is stored."
+    ),
+    dependencies=[Security(verify_api_key)],
+    responses=_COMMON_RESPONSES,
+)
+def validate_edited_result(
+    job_id: UUID,
+    request: EditedResultRequest,
+    use_case: Annotated[ValidateEditedResult, Depends(get_validate_edited_result)],
+) -> ValidateResponse:
+    try:
+        return ValidateResponse.model_validate(use_case.execute(job_id, _rows(request)))
+    except JobNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found") from exc
+
+
+@app.put(
+    "/jobs/{job_id}/result/edited",
+    response_model=EditedResultResponse,
+    tags=["Jobs"],
+    summary="Save an edited timetable",
+    description=(
+        "Store the manually edited timetable next to the solver result (the original result "
+        "is kept). Violations are reported but do not prevent saving."
+    ),
+    dependencies=[Security(verify_api_key)],
+    responses=_COMMON_RESPONSES,
+)
+def save_edited_result(
+    job_id: UUID,
+    request: EditedResultRequest,
+    use_case: Annotated[SaveEditedResult, Depends(get_save_edited_result)],
+) -> EditedResultResponse:
+    try:
+        return EditedResultResponse.model_validate(use_case.execute(job_id, _rows(request)))
+    except JobNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found") from exc
+
+
+@app.get(
+    "/jobs/{job_id}/result/edited",
+    response_model=EditedResultResponse,
+    tags=["Jobs"],
+    summary="Get the saved edited timetable",
+    dependencies=[Security(verify_api_key)],
+    responses={**_COMMON_RESPONSES, 409: {"description": "No edited timetable saved yet"}},
+)
+def get_edited_result(
+    job_id: UUID,
+    use_case: Annotated[GetEditedResult, Depends(get_get_edited_result)],
+) -> EditedResultResponse:
+    try:
+        return EditedResultResponse.model_validate(use_case.execute(job_id))
+    except JobNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found") from exc
+    except EditedResultNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="No edited result saved"
         ) from exc
