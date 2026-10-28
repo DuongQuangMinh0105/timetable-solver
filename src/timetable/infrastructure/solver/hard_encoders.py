@@ -121,3 +121,21 @@ class MaxConsecutiveEncoder:
                     limit = ctx.model.add(sum(window) <= max_run)
                     if ctx.group_literals is not None:
                         limit.only_enforce_if(ctx.group_literal(f"{self.name}:{class_id}"))
+
+
+class FixedAssignmentsEncoder:
+    """Giữ nguyên các ca người dùng đã khóa vào ô (ngày, tiết bắt đầu, phòng) cố định.
+
+    Không có ca khóa thì không làm gì. Ô khóa không hợp lệ (phòng sai loại, tiết bị cấm) làm mô
+    hình vô nghiệm, và chẩn đoán báo nhóm `fixed_assignments:<ca học>`.
+    """
+
+    name = "fixed_assignments"
+
+    def encode(self, ctx: ModelContext) -> None:
+        for fixed in ctx.problem.fixed_assignments:
+            key = (fixed.unit_id, fixed.day, fixed.period, fixed.room_id)
+            wanted = [ctx.s[key]] if key in ctx.s else []
+            constraint = ctx.model.add(cp_model.LinearExpr.sum(wanted) == 1)
+            if ctx.group_literals is not None:
+                constraint.only_enforce_if(ctx.group_literal(f"{self.name}:{fixed.unit_id}"))

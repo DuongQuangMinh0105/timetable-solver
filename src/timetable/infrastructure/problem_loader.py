@@ -8,6 +8,7 @@ from timetable.domain.constraint_config import (
     unsupported_version_message,
 )
 from timetable.domain.entities import (
+    Assignment,
     ClassGroup,
     Course,
     LessonUnit,
@@ -73,6 +74,7 @@ def problem_from_dict(data: dict[str, Any]) -> Problem:
         max_consecutive_periods=constraints.get("max_consecutive_periods", 2),
         block_starts=None if block_starts is None else tuple(block_starts),
         soft_weights=soft_weights,  # <-- Truyền vào Problem
+        fixed_assignments=_fixed_assignments(data, units, grid, data["rooms"]),
     )
 
     issues = check_units_match_courses(problem)
@@ -80,6 +82,34 @@ def problem_from_dict(data: dict[str, Any]) -> Problem:
         raise InvalidProblemError("; ".join(f"{x.code}: {x.message}" for x in issues))
 
     return problem
+
+
+def _fixed_assignments(
+    data: dict[str, Any], units: tuple[LessonUnit, ...], grid: TimeGrid, rooms: list[dict[str, Any]]
+) -> tuple[Assignment, ...]:
+    """Đọc `fixed_assignments` (ca bị khóa) và kiểm tra tham chiếu, ngày, tiết."""
+    unit_ids = {u.id for u in units}
+    room_ids = {r["id"] for r in rooms}
+    result: list[Assignment] = []
+    seen: set[str] = set()
+    for item in data.get("fixed_assignments") or []:
+        unit_id = item["unit_id"]
+        if unit_id not in unit_ids:
+            raise InvalidProblemError(f"Ca cố định tham chiếu ca học không tồn tại: {unit_id}.")
+        if unit_id in seen:
+            raise InvalidProblemError(f"Ca học {unit_id} bị khóa hai lần.")
+        seen.add(unit_id)
+        if item["room_id"] not in room_ids:
+            raise InvalidProblemError(
+                f"Ca cố định {unit_id} tham chiếu phòng không tồn tại: {item['room_id']}."
+            )
+        day, period = item["day"], item["start_period"]
+        if not 0 <= day < grid.days or period not in grid.allowed_periods:
+            raise InvalidProblemError(
+                f"Ca cố định {unit_id} nằm ngoài lưới thời gian (ngày {day}, tiết {period})."
+            )
+        result.append(Assignment(unit_id=unit_id, day=day, period=period, room_id=item["room_id"]))
+    return tuple(result)
 
 
 def solve_options_from_dict(data: dict[str, Any]) -> SolveOptions:

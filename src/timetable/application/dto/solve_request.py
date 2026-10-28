@@ -79,6 +79,15 @@ class ConstraintsInput(InputSchema):
 _DEFAULT_SOLVE_OPTIONS = SolveOptions()
 
 
+class FixedAssignmentInput(InputSchema):
+    """Một ca bị khóa vào ô cố định. `start_period` là tiết bắt đầu (như trong kết quả giải)."""
+
+    unit_id: str = Field(min_length=1)
+    day: int = Field(ge=0)
+    start_period: int = Field(ge=0)
+    room_id: str = Field(min_length=1)
+
+
 class SolverInput(InputSchema):
     time_limit_s: float = Field(
         default=_DEFAULT_SOLVE_OPTIONS.time_limit_s,
@@ -108,6 +117,7 @@ class SolveRequest(InputSchema):
             "reserve_mba_room."
         ),
     )
+    fixed_assignments: list[FixedAssignmentInput] = Field(default_factory=list)
     solver: SolverInput = Field(default_factory=SolverInput)
 
     @field_validator("soft_weights")

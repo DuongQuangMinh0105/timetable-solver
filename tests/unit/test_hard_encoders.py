@@ -23,6 +23,7 @@ def test_default_encoder_names() -> None:
         "teacher_no_overlap",
         "class_no_overlap",
         "max_consecutive_periods",
+        "fixed_assignments",
     ]
 
 

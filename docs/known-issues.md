@@ -41,3 +41,4 @@ băng code, **Thấp** = dọn dẹp.
 - Excel: `unavailable_slots` (giáo viên) và `fixed_day`/`fixed_period` (môn) trong mẫu tiếng Anh chưa được đưa vào mô hình; importer bỏ qua và cảnh báo. Giá trị tiết ngoài khoảng bị báo lỗi lúc đọc file.
 - API `GET /jobs/{id}/result` có thêm trường `diagnosis` (null khi có lịch). UI trước đây không gọi endpoint này nên không hiện lịch thật; đã sửa.
 - Tham số solver và trọng số đã chốt: `docs/reports/solver_params.md`. Giải thích mô hình: `docs/model-explained.md`.
+- Giao diện đã cho sửa dữ liệu đầu vào và sửa kết quả (kiểm tra, lưu, giải lại giữ ca đã sửa), xem `docs/ui-editing.md`. Chưa có kéo thả trên lưới lịch.

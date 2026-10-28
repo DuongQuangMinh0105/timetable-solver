@@ -6,6 +6,7 @@ from timetable.domain.entities.lesson_unit import LessonUnit
 from timetable.domain.entities.room import Room
 from timetable.domain.entities.teacher import Teacher
 from timetable.domain.entities.time_grid import TimeGrid
+from timetable.domain.entities.timetable import Assignment
 from timetable.domain.rules.soft_constraints import W_G316, W_ROOM, W_SAT
 
 
@@ -24,3 +25,6 @@ class Problem:
 
     # THÊM DÒNG NÀY: Trọng số cho các ràng buộc mềm (room stability, tránh T7, ưu tiên G316)
     soft_weights: tuple[int, int, int] = (W_ROOM, W_SAT, W_G316)
+
+    # Các ca người dùng khóa vào ô cố định (ngày, tiết bắt đầu, phòng); bộ giải phải giữ nguyên.
+    fixed_assignments: tuple[Assignment, ...] = ()
