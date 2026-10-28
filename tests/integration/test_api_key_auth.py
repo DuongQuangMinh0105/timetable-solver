@@ -93,6 +93,10 @@ def test_openapi_documents_api_key_header() -> None:
     assert schema["paths"]["/solve"]["post"]["security"]
     assert schema["paths"]["/jobs/{job_id}"]["get"]["security"]
     assert schema["paths"]["/jobs/{job_id}/result"]["get"]["security"]
+
+    assert schema["paths"]["/jobs/{job_id}/validate"]["post"]["security"]
+    assert schema["paths"]["/jobs/{job_id}/result/edited"]["put"]["security"]
+    assert schema["paths"]["/jobs/{job_id}/result/edited"]["get"]["security"]
     assert "security" not in schema["paths"]["/health"]["get"]
 
 
@@ -101,7 +105,14 @@ def test_openapi_documents_api_operations_and_response_schemas() -> None:
         schema = client.get("/openapi.json").json()
 
     operations = schema["paths"]
-    assert set(operations) == {"/health", "/solve", "/jobs/{job_id}", "/jobs/{job_id}/result"}
+    assert set(operations) == {
+        "/health",
+        "/solve",
+        "/jobs/{job_id}",
+        "/jobs/{job_id}/result",
+        "/jobs/{job_id}/validate",
+        "/jobs/{job_id}/result/edited",
+    }
     assert (
         operations["/solve"]["post"]["requestBody"]["content"]["application/json"]["schema"]["$ref"]
         == "#/components/schemas/SolveRequest"
