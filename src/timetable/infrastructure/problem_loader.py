@@ -18,6 +18,7 @@ from timetable.domain.entities import (
     TimeGrid,
 )
 from timetable.domain.rules.soft_constraints import parse_soft_weights
+from timetable.domain.services.teacher_department import check_teacher_departments
 from timetable.domain.services.unit_consistency import check_units_match_courses
 from timetable.domain.services.unit_splitter import lesson_units_for_course
 
@@ -77,7 +78,7 @@ def problem_from_dict(data: dict[str, Any]) -> Problem:
         fixed_assignments=_fixed_assignments(data, units, grid, data["rooms"]),
     )
 
-    issues = check_units_match_courses(problem)
+    issues = [*check_units_match_courses(problem), *check_teacher_departments(problem)]
     if issues:
         raise InvalidProblemError("; ".join(f"{x.code}: {x.message}" for x in issues))
 

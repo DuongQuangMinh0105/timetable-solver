@@ -59,6 +59,12 @@ def _read_sheet(
     return result
 
 
+def _text(value: Any) -> str | None:
+    """Chuỗi đã bỏ khoảng trắng thừa; rỗng thì None (cột tùy chọn)."""
+    text = "" if value is None else str(value).strip()
+    return text or None
+
+
 def _int(value: Any, sheet: str, row: int, column: str, minimum: int, errors: list[str]) -> int:
     number: int | None = None
     if isinstance(value, float) and value.is_integer():
@@ -103,13 +109,13 @@ class OpenpyxlExcelImporter:
         rooms = _read_sheet(
             wb, SHEET_ROOMS, ("id", "name", "capacity"), ("room_type", "also_supports"), errors
         )
-        teachers = _read_sheet(wb, SHEET_TEACHERS, ("id", "name"), (), errors)
+        teachers = _read_sheet(wb, SHEET_TEACHERS, ("id", "name"), ("department",), errors)
         classes = _read_sheet(wb, SHEET_CLASSES, ("id", "name", "size"), ("kind",), errors)
         courses = _read_sheet(
             wb,
             SHEET_COURSES,
             ("id", "name", "class_id", "teacher_id", "periods_per_week"),
-            ("required_room_type",),
+            ("required_room_type", "department"),
             errors,
         )
 
@@ -157,6 +163,7 @@ class OpenpyxlExcelImporter:
                     "teacher_id": str(r["teacher_id"]),
                     "periods_per_week": periods,
                     "required_room_type": str(r.get("required_room_type") or "standard"),
+                    "department": _text(r.get("department")),
                 }
             )
 
@@ -171,7 +178,14 @@ class OpenpyxlExcelImporter:
                 "allowed_periods": list(ALLOWED_PERIODS),
             },
             "rooms": room_data,
-            "teachers": [{"id": str(r["id"]), "name": str(r["name"])} for _, r in teachers],
+            "teachers": [
+                {
+                    "id": str(r["id"]),
+                    "name": str(r["name"]),
+                    "department": _text(r.get("department")),
+                }
+                for _, r in teachers
+            ],
             "class_groups": class_data,
             "courses": course_data,
             "constraints": {"max_consecutive_periods": MAX_CONSECUTIVE_PERIODS},

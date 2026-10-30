@@ -41,6 +41,17 @@ Môn từ 3 tiết trở lên tách thành block 2+1 (xem `docs/solver-model.md`
 
 Chi tiết: `docs/soft-constraints.md`.
 
+## Nhóm chuyên môn của giáo viên (kiểm tra dữ liệu)
+
+Giáo viên và môn có thể khai cột tùy chọn `department` (ví dụ `IT`, `Business`, `Design`, `English`).
+Nếu **cả hai** đều khai thì giáo viên phải cùng nhóm với môn mình dạy, nếu không dữ liệu bị từ chối
+(API trả 422, giao diện báo lỗi) với thông báo tiếng Việt và gợi ý giáo viên cùng nhóm. Thiếu một
+trong hai thì không giới hạn; so sánh không phân biệt hoa thường.
+
+Đây là kiểm tra dữ liệu đầu vào (mỗi môn đã có sẵn một giáo viên), không phải ràng buộc của mô hình
+CP-SAT, nên không đổi `constraint_config_version`. Mã: `domain/services/teacher_department.py`.
+Số giáo viên mỗi nhóm không cố định: thêm hoặc bớt giáo viên chỉ cần sửa bảng Giáo viên.
+
 ## Lịch sử phiên bản
 
 | Phiên bản | Nội dung |

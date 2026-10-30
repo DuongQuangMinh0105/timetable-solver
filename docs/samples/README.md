@@ -2,7 +2,7 @@
 
 | File | Mục đích | Kết quả mong đợi |
 |---|---|---|
-| `school_realistic.xlsx` | Dữ liệu theo cơ cấu phòng thật: 12 phòng dùng được, 20 giáo viên (GV1 đến GV20), 12 lớp (8 thường, 2 MBA, 2 Design), 66 môn, 208 tiết/tuần | OPTIMAL, khoảng 14 giây với 2 luồng |
+| `school_realistic.xlsx` | Dữ liệu theo cơ cấu phòng thật: 12 phòng dùng được, 20 giáo viên (GV1 đến GV20), 12 lớp (8 thường, 2 MBA, 2 Design), 66 môn, 208 tiết/tuần | OPTIMAL, khoảng 16 giây với 2 luồng |
 | `school_demo_small.xlsx` | Bản nhỏ của file trên (6 lớp, 33 môn, 104 tiết/tuần, vẫn đủ 12 phòng và GV1 đến GV20) để thử nhanh trên máy yếu hoặc Render miễn phí | OPTIMAL, khoảng 9 giây với 1 luồng |
 | `ok_basic.xlsx` | Dữ liệu nhỏ (schema tiếng Anh) để thử nhanh giao diện | OPTIMAL |
 | `fail_teacher_overload.xlsx` | Giáo viên bị giao quá nhiều tiết | INFEASIBLE, chẩn đoán tiếng Việt |
@@ -18,5 +18,8 @@
   G317, G318, G319, G502, G503, G504, G508, G509, G510. Sức chứa tạm 30.
 - **Phòng loại khỏi bài toán** (ghi ở sheet `Ghi chú`): G311 và G312 (hội trường), G315 (tư vấn tuyển sinh),
   G320 (để đồ), G501 (Director), G505 (Academic Affairs), G506 (thư viện), G507 (Student service).
-- Giáo viên đặt tên `GV1` đến `GV20`; mỗi người khoảng 10 tiết/tuần.
+- Giáo viên đặt tên `GV1` đến `GV20`, chia nhóm chuyên môn (cột `department`): GV1-5 IT, GV6-10 Business,
+  GV11-15 Design, GV16-20 English. Môn Tiếng Anh và Kỹ năng mềm do nhóm English dạy; môn của lớp
+  MBA và các hướng BA, MK, AC thuộc Business; môn của lớp Design thuộc Design. Đổi số giáo viên mỗi
+  nhóm bằng `TEACHER_GROUPS` trong script rồi sinh lại file.
 - Số liệu lớp, môn, số tiết là dữ liệu giả lập hợp lý để thử hệ thống, chưa phải danh sách thật của nhà trường.
