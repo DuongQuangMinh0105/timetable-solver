@@ -3,4 +3,6 @@
 
 # Hạ tầng và CI: chỉ 2 người phụ trách
 /.github/               @DuongQuangMinh0105 @nlakhoa123
-/infra/                 @DuongQuangMinh0105 @nlakhoa123
+/Dockerfile             @DuongQuangMinh0105 @nlakhoa123
+/compose.yaml           @DuongQuangMinh0105 @nlakhoa123
+/render.yaml            @DuongQuangMinh0105 @nlakhoa123

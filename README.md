@@ -10,7 +10,7 @@ Yêu cầu: Python 3.11, uv.
 - API: FastAPI + Pydantic + uvicorn, đóng gói Docker
 - CSDL: PostgreSQL + SQLAlchemy + Alembic
 - Kiểm thử/chất lượng: pytest, ruff, mypy, pre-commit
-- Repo và CI/CD: GitHub + GitHub Actions; IaC: Terraform (thư mục `infra/`)
+- Repo và CI/CD: GitHub + GitHub Actions; triển khai: Docker + Render (`render.yaml`) + Neon
 
 ## Luồng hoạt động
 1. Client gửi JSON đến `POST /solve`.
@@ -66,7 +66,7 @@ $env:API_KEY = "<cùng khóa với API>"
 uv run streamlit run src/timetable/interfaces/ui/app.py
 ```
 
-Mở `http://localhost:8501`, tải một file Excel (ví dụ `docs/samples/ok_basic.xlsx`), bấm **Đọc file**, sửa dữ liệu nếu cần rồi bấm **Lưu và giải**; sau khi có lịch có thể sửa kết quả ([hướng dẫn](docs/ui-editing.md)). Các file
+Mở `http://localhost:8501`, tải một file Excel (ví dụ `docs/samples/ok_basic.xlsx`) rồi bấm giải. Các file
 `docs/samples/fail_*.xlsx` cố tình sai dữ liệu để xem chẩn đoán vô nghiệm bằng tiếng Việt. Giải thích
 mô hình: [docs/model-explained.md](docs/model-explained.md).
 
