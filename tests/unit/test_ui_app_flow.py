@@ -78,6 +78,7 @@ def test_input_tab_shows_editors_and_solves(api: FakeApi) -> None:
     assert api.paths()[:3] == ["POST /solve", "GET /jobs/job1", "GET /jobs/job1/result"]
     solved = api.calls[0][2]
     assert len(solved["courses"]) == 6 and "fixed_assignments" not in solved
+    assert solved["time_limit_s"] == 120.0
     assert any(t.label == "✏️ Sửa kết quả" for t in at.tabs)
 
 

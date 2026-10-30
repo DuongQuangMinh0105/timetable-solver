@@ -31,6 +31,8 @@ from timetable.interfaces.ui.tables import (
     tables_to_payload,
 )
 
+DEFAULT_TIME_LIMIT_S = 120
+
 st.set_page_config(
     page_title="Hệ thống Xếp Thời khoá biểu",
     page_icon="📅",
@@ -66,15 +68,25 @@ def render_dashboard(
         )
 
     if needs_diagnosis(result_data):
-        st.error(f"**{diagnosis_title(result_data)}** (trạng thái {status})")
         lines = diagnosis_lines(result_data)
+        timed_out = status == "UNKNOWN" and not lines
+        title = f"**{diagnosis_title(result_data)}** (trạng thái {status})"
+        if timed_out:
+            st.warning(title)
+        else:
+            st.error(title)
         for line in lines:
             st.markdown(f"- {line}")
-        if not lines:
-            if status == "UNKNOWN":
-                st.info("Bộ giải hết thời gian mà chưa tìm ra lịch. Thử tăng thời gian giải.")
-            else:
-                st.info("Chưa xác định được nhóm ràng buộc gây xung đột.")
+        if timed_out:
+            st.markdown(
+                "Bộ giải chưa kịp tìm ra lịch trong thời gian giới hạn. "
+                "**Điều này không có nghĩa dữ liệu vô nghiệm.** Thử lần lượt:\n"
+                "- Tăng **Thời gian giải tối đa** ở tab 1 (ví dụ 300 giây).\n"
+                "- Giảm số lớp hoặc số môn, hoặc dùng file mẫu nhỏ hơn.\n"
+                "- Chạy API trên máy nhiều CPU hơn (Render miễn phí chỉ có 0,1 CPU nên giải chậm)."
+            )
+        elif not lines:
+            st.info("Chưa xác định được nhóm ràng buộc gây xung đột.")
 
     # Chia các Tab chức năng
     labels = [
@@ -215,6 +227,16 @@ def render_input_editor(client: SolverApiClient) -> None:
         )
         edited["grid"] = {"days": days, "periods": periods, "allowed_periods": allowed}
 
+    time_limit = st.number_input(
+        "⏱️ Thời gian giải tối đa (giây)",
+        min_value=10,
+        max_value=900,
+        value=int(st.session_state["base_payload"].get("time_limit_s") or DEFAULT_TIME_LIMIT_S),
+        step=10,
+        help="Bộ giải dừng khi hết thời gian và trả nghiệm tốt nhất đã có. "
+        "Dữ liệu lớn hoặc máy yếu cần đặt cao hơn.",
+        key=f"tl_{version}",
+    )
     if st.button("💾 Lưu và giải", type="primary", key=f"solve_{version}"):
         payload, errors = tables_to_payload(edited, st.session_state["base_payload"])
         if errors:
@@ -223,6 +245,7 @@ def render_input_editor(client: SolverApiClient) -> None:
                 st.markdown(f"- {error}")
             return
         assert payload is not None
+        payload["time_limit_s"] = float(time_limit)
         submit_job(client, payload)
 
 

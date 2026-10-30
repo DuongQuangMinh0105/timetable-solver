@@ -7,11 +7,15 @@ SOURCE_TITLES = {
     "solver": "Các nhóm ràng buộc xung đột (do bộ giải xác định)",
 }
 FALLBACK_TITLE = "Không thể xếp lịch với dữ liệu này"
+TIMEOUT_TITLE = "Chưa tìm ra lịch trong thời gian cho phép"
 
 
 def diagnosis_title(result: dict[str, Any]) -> str:
     diagnosis = result.get("diagnosis") or {}
-    return SOURCE_TITLES.get(diagnosis.get("source", ""), FALLBACK_TITLE)
+    if diagnosis.get("source", "") in SOURCE_TITLES:
+        return SOURCE_TITLES[diagnosis["source"]]
+    # UNKNOWN là hết giờ mà chưa có kết luận, khác với INFEASIBLE (đã chứng minh vô nghiệm).
+    return TIMEOUT_TITLE if result.get("status") == "UNKNOWN" else FALLBACK_TITLE
 
 
 def diagnosis_lines(result: dict[str, Any]) -> list[str]:

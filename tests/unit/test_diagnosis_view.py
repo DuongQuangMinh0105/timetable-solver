@@ -1,5 +1,6 @@
 from timetable.interfaces.ui.diagnosis_view import (
     FALLBACK_TITLE,
+    TIMEOUT_TITLE,
     diagnosis_lines,
     diagnosis_title,
     needs_diagnosis,
@@ -40,3 +41,8 @@ def test_needs_diagnosis_only_without_schedule() -> None:
     assert needs_diagnosis(INFEASIBLE)
     assert needs_diagnosis({"status": "UNKNOWN", "assignments": []})
     assert not needs_diagnosis({"status": "OPTIMAL", "assignments": [{"unit_id": "u"}]})
+
+
+def test_unknown_without_diagnosis_is_a_timeout_not_infeasible() -> None:
+    assert diagnosis_title({"status": "UNKNOWN"}) == TIMEOUT_TITLE
+    assert "vô nghiệm" not in TIMEOUT_TITLE
