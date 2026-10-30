@@ -5,6 +5,7 @@ from typing import Any
 
 from timetable.domain.entities import Problem, Timetable
 from timetable.domain.rules.soft_constraints import W_G316, W_ROOM, W_SAT
+from timetable.domain.services.time_labels import day_name
 from timetable.domain.services.timetable_checker import check_timetable
 from timetable.domain.violation import Violation
 
@@ -47,7 +48,7 @@ def soft_violations(
         rooms_of.setdefault(unit.course_id, set()).add(a.room_id)
         if a.day in sat_days:
             out.append(
-                SoftViolation("AVOID_SATURDAY", f"{unit.id} học vào ngày {a.day} (Thứ 7).", w_sat)
+                SoftViolation("AVOID_SATURDAY", f"{unit.id} học vào {day_name(a.day)}.", w_sat)
             )
         if a.room_id == mba_room_id and unit.course_id not in mba_courses:
             out.append(

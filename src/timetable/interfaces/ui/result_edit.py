@@ -2,6 +2,9 @@
 
 from typing import Any
 
+from timetable.domain.services.time_labels import day_name
+from timetable.interfaces.ui.schedule_view import parse_day, parse_period, period_label
+
 Rows = list[dict[str, Any]]
 
 LOCKED = "locked"
@@ -10,16 +13,19 @@ API_FIELDS = ("unit_id", "day", "start_period", "room_id")
 
 
 def to_edit_rows(assignments: Rows) -> Rows:
-    """Mỗi phân công thành một dòng sửa được, kèm cột `locked` (khóa ca khi giải lại)."""
-    return [{**a, LOCKED: False} for a in assignments]
+    """Mỗi phân công thành một dòng sửa được, kèm cột `locked` (khóa ca khi giải lại).
 
-
-def _int(value: Any) -> int | None:
-    try:
-        number = float(value)
-    except (TypeError, ValueError):
-        return None
-    return int(number) if number.is_integer() and number >= 0 else None
+    Ngày và tiết hiển thị dạng "Thứ Hai", "Tiết 1"; `to_api_rows` đổi ngược lại thành chỉ số.
+    """
+    return [
+        {
+            **a,
+            "day": day_name(a["day"]),
+            "start_period": period_label(a["start_period"]),
+            LOCKED: False,
+        }
+        for a in assignments
+    ]
 
 
 def to_api_rows(rows: Rows) -> tuple[Rows, list[str]]:
@@ -29,10 +35,10 @@ def to_api_rows(rows: Rows) -> tuple[Rows, list[str]]:
     seen: set[str] = set()
     for number, row in enumerate(rows, start=1):
         unit_id = str(row.get("unit_id") or "").strip()
-        day, period = _int(row.get("day")), _int(row.get("start_period"))
+        day, period = parse_day(row.get("day")), parse_period(row.get("start_period"))
         room = str(row.get("room_id") or "").strip()
         if not unit_id or day is None or period is None or not room:
-            errors.append(f"Dòng {number} ({unit_id or '?'}): cần ngày, tiết (số >= 0) và phòng.")
+            errors.append(f"Dòng {number} ({unit_id or '?'}): cần chọn thứ, tiết và phòng.")
             continue
         if unit_id in seen:
             errors.append(f"Dòng {number}: ca học {unit_id} xuất hiện hai lần.")

@@ -22,6 +22,12 @@ from timetable.interfaces.ui.result_edit import (
     to_api_rows,
     to_edit_rows,
 )
+from timetable.interfaces.ui.schedule_view import (
+    day_options,
+    display_rows,
+    period_options,
+    weekly_grid,
+)
 from timetable.interfaces.ui.tables import (
     CLASS_COLUMNS,
     COURSE_COLUMNS,
@@ -47,6 +53,41 @@ def export_schedule_to_excel(assignments: list[dict[str, Any]]) -> bytes:
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
         df.to_excel(writer, index=False, sheet_name="ThoiKhoaBieu")
     return output.getvalue()
+
+
+def _course_names(base_payload: dict[str, Any] | None) -> dict[str, str]:
+    if not base_payload:
+        return {}
+    return {str(c["id"]): str(c["name"]) for c in base_payload.get("courses", [])}
+
+
+def _grid_axes(
+    base_payload: dict[str, Any] | None, assignments: list[dict[str, Any]]
+) -> tuple[int, list[int]]:
+    """Số ngày và các tiết (từ 0) để vẽ lưới tuần, lấy từ dữ liệu đầu vào nếu có."""
+    grid = (base_payload or {}).get("grid")
+    if grid:
+        return int(grid["days"]), [int(p) for p in grid["allowed_periods"]]
+    last = max((a["start_period"] + int(a.get("duration") or 1) for a in assignments), default=6)
+    return 6, list(range(max(last, 6)))
+
+
+def render_schedule(
+    rows: list[dict[str, Any]],
+    cell: tuple[str, ...],
+    base_payload: dict[str, Any] | None,
+) -> None:
+    """Lịch theo tuần (Thứ Hai đến Thứ Bảy, theo tiết) và danh sách ca học bằng tiếng Việt."""
+    names = _course_names(base_payload)
+    days, periods = _grid_axes(base_payload, rows)
+    st.markdown("**Lịch theo tuần**")
+    st.dataframe(
+        pd.DataFrame(weekly_grid(rows, cell, days, periods, names)),
+        width="stretch",
+        hide_index=True,
+    )
+    st.markdown("**Danh sách ca học**")
+    st.dataframe(pd.DataFrame(display_rows(rows, names)), width="stretch", hide_index=True)
 
 
 def render_dashboard(
@@ -137,7 +178,9 @@ def render_dashboard(
             class_list = sorted(df_assign["class_id"].dropna().unique())
             selected_class = st.selectbox("Chọn lớp học:", class_list, key="select_class")
             df_class = df_assign[df_assign["class_id"] == selected_class]
-            st.dataframe(df_class, width="stretch")
+            render_schedule(
+                df_class.to_dict("records"), ("course_id", "teacher_id", "room_id"), base_payload
+            )
         else:
             st.dataframe(df_assign, width="stretch")
 
@@ -148,7 +191,9 @@ def render_dashboard(
             teacher_list = sorted(df_assign["teacher_id"].dropna().unique())
             selected_teacher = st.selectbox("Chọn giáo viên:", teacher_list, key="select_teacher")
             df_teacher = df_assign[df_assign["teacher_id"] == selected_teacher]
-            st.dataframe(df_teacher, width="stretch")
+            render_schedule(
+                df_teacher.to_dict("records"), ("course_id", "class_id", "room_id"), base_payload
+            )
         else:
             st.dataframe(df_assign, width="stretch")
 
@@ -159,7 +204,9 @@ def render_dashboard(
             room_list = sorted(df_assign["room_id"].dropna().unique())
             selected_room = st.selectbox("Chọn phòng học:", room_list, key="select_room")
             df_room = df_assign[df_assign["room_id"] == selected_room]
-            st.dataframe(df_room, width="stretch")
+            render_schedule(
+                df_room.to_dict("records"), ("course_id", "class_id", "teacher_id"), base_payload
+            )
         else:
             st.dataframe(df_assign, width="stretch")
 
@@ -274,9 +321,10 @@ def render_editor(
         if base_payload
         else sorted({a["room_id"] for a in assignments})
     )
+    days, periods = _grid_axes(base_payload, assignments)
     st.caption(
-        "Sửa cột day, start_period (số từ 0) và room_id. Đánh dấu **locked** để giữ nguyên ca "
-        "đó khi giải lại; ca đã sửa cũng tự được giữ."
+        "Chọn lại **Thứ**, **Tiết bắt đầu** và **Phòng** của từng ca. Đánh dấu **Khóa ca** để giữ "
+        "nguyên ca đó khi giải lại; ca đã sửa cũng tự được giữ."
     )
     frame = st.data_editor(
         pd.DataFrame(to_edit_rows(assignments)),
@@ -284,8 +332,19 @@ def render_editor(
         width="stretch",
         disabled=list(READ_ONLY),
         column_config={
-            "room_id": st.column_config.SelectboxColumn("room_id", options=rooms, required=True),
-            LOCKED: st.column_config.CheckboxColumn("locked"),
+            "unit_id": st.column_config.TextColumn("Mã ca"),
+            "course_id": st.column_config.TextColumn("Môn"),
+            "class_id": st.column_config.TextColumn("Lớp"),
+            "teacher_id": st.column_config.TextColumn("Giáo viên"),
+            "duration": st.column_config.NumberColumn("Số tiết"),
+            "day": st.column_config.SelectboxColumn(
+                "Thứ", options=day_options(days), required=True
+            ),
+            "start_period": st.column_config.SelectboxColumn(
+                "Tiết bắt đầu", options=period_options(periods), required=True
+            ),
+            "room_id": st.column_config.SelectboxColumn("Phòng", options=rooms, required=True),
+            LOCKED: st.column_config.CheckboxColumn("Khóa ca"),
         },
     )
     rows: list[dict[str, Any]] = frame.to_dict("records")
