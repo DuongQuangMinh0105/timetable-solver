@@ -13,12 +13,13 @@ Mã nguồn: `interfaces/ui/tables.py` (không phụ thuộc streamlit, có test
 
 ## 2. Sửa kết quả
 Tab **Kết quả và chỉnh sửa**, mục **Sửa kết quả** (chỉ hiện khi có lịch):
-- Sửa cột `day`, `start_period` (số từ 0) và `room_id` (chọn từ danh sách phòng). Các cột còn lại chỉ đọc.
+- Chọn lại cột **Thứ** (Thứ Hai đến Thứ Bảy), **Tiết bắt đầu** (Tiết 1 đến 6) và **Phòng** (chọn từ danh sách). Các cột còn lại chỉ đọc. Giao diện đổi nhãn này về chỉ số 0 trước khi gửi API (Thứ Hai là `day` 0, Tiết 1 là `start_period` 0).
+- Các tab Lịch theo lớp, giáo viên, phòng hiển thị lưới tuần (Thứ Hai đến Thứ Bảy theo tiết) và danh sách ca có giờ học.
 - **Kiểm tra**: gọi `POST /jobs/{id}/validate`, hiện số vi phạm cứng, mềm và điểm phạt, không lưu gì.
 - **Lưu bản sửa**: gọi `PUT /jobs/{id}/result/edited`; bản gốc của bộ giải được giữ nguyên.
   Vi phạm được báo nhưng không chặn việc lưu.
 - **Giải lại, giữ ca đã sửa/khóa**: gửi lại bài toán kèm `fixed_assignments` gồm các ca đã sửa và các
-  ca đánh dấu `locked`; bộ giải xếp phần còn lại quanh chúng. Nếu các ca khóa mâu thuẫn nhau thì
+  ca đánh dấu **Khóa ca**; bộ giải xếp phần còn lại quanh chúng. Nếu các ca khóa mâu thuẫn nhau thì
   nhận chẩn đoán vô nghiệm (xem `docs/diagnosis.md`).
 - **Tải lịch đã sửa**: xuất Excel từ bảng đang sửa.
 Mã nguồn: `interfaces/ui/result_edit.py` (có test) và hàm `render_editor` trong `app.py`.

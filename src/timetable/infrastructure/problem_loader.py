@@ -19,6 +19,7 @@ from timetable.domain.entities import (
 )
 from timetable.domain.rules.soft_constraints import parse_soft_weights
 from timetable.domain.services.teacher_department import check_teacher_departments
+from timetable.domain.services.time_labels import slot_name
 from timetable.domain.services.unit_consistency import check_units_match_courses
 from timetable.domain.services.unit_splitter import lesson_units_for_course
 
@@ -107,7 +108,7 @@ def _fixed_assignments(
         day, period = item["day"], item["start_period"]
         if not 0 <= day < grid.days or period not in grid.allowed_periods:
             raise InvalidProblemError(
-                f"Ca cố định {unit_id} nằm ngoài lưới thời gian (ngày {day}, tiết {period})."
+                f"Ca cố định {unit_id} nằm ngoài lưới thời gian ({slot_name(day, period)})."
             )
         result.append(Assignment(unit_id=unit_id, day=day, period=period, room_id=item["room_id"]))
     return tuple(result)

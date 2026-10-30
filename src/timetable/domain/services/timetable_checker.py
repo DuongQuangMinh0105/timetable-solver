@@ -2,6 +2,7 @@ from collections import defaultdict
 
 from timetable.domain.entities import Problem, Timetable
 from timetable.domain.services.slot_policy import allowed_starts
+from timetable.domain.services.time_labels import day_name, slot_name
 from timetable.domain.violation import Violation
 
 
@@ -68,7 +69,7 @@ def check_timetable(problem: Problem, timetable: Timetable) -> list[Violation]:
             bad(
                 "INVALID_SLOT",
                 f"{unit.id} bắt đầu ở ô không hợp lệ "
-                f"(ngày {assignment.day}, tiết {assignment.period}).",
+                f"({slot_name(assignment.day, assignment.period)}).",
             )
 
         if not room.can_host(unit.required_room_type):
@@ -105,8 +106,8 @@ def check_timetable(problem: Problem, timetable: Timetable) -> list[Violation]:
                 if key in used[kind]:
                     bad(
                         f"{kind.upper()}_OVERLAP",
-                        f"Trùng {kind} {owner} ở ngày {assignment.day}, "
-                        f"tiết {period}: {used[kind][key]} và {unit.id}.",
+                        f"Trùng {kind} {owner} vào {slot_name(assignment.day, period)}: "
+                        f"{used[kind][key]} và {unit.id}.",
                     )
 
                 used[kind][key] = unit.id
@@ -124,7 +125,7 @@ def check_timetable(problem: Problem, timetable: Timetable) -> list[Violation]:
             bad(
                 "MAX_CONSECUTIVE",
                 f"Lớp {class_id} học quá "
-                f"{problem.max_consecutive_periods} tiết liên tiếp ở ngày {day}.",
+                f"{problem.max_consecutive_periods} tiết liên tiếp vào {day_name(day)}.",
             )
 
     return violations
