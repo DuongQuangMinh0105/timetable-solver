@@ -86,7 +86,7 @@ def render_dashboard(
     can_edit = client is not None and job_id is not None and bool(assignments)
     if can_edit:
         labels.append("✏️ Sửa kết quả")
-    tabs = st.tabs(labels)
+    tabs = st.tabs(labels, key="dashboard_tabs")
     tab_summary, tab_class, tab_teacher, tab_room = tabs[:4]
 
     # --- TAB 1: TỔNG QUAN & VI PHẠM ---
@@ -107,8 +107,10 @@ def render_dashboard(
         if violations:
             df_violations = pd.DataFrame(violations)
             st.dataframe(df_violations, width="stretch")
-        else:
+        elif assignments:
             st.success("🎉 Không tìm thấy vi phạm nào! Lịch học hoàn hảo.")
+        else:
+            st.info("Không có lịch để kiểm tra vi phạm (xem chẩn đoán phía trên).")
 
     if not assignments:
         st.warning("Chưa có dữ liệu phân công để hiển thị lịch.")
@@ -337,7 +339,9 @@ def main() -> None:
     for warning in st.session_state.get("import_warnings", []):
         st.warning(warning)
 
-    tab_input, tab_result = st.tabs(["1️⃣ Dữ liệu đầu vào (sửa được)", "2️⃣ Kết quả và chỉnh sửa"])
+    tab_input, tab_result = st.tabs(
+        ["1️⃣ Dữ liệu đầu vào (sửa được)", "2️⃣ Kết quả và chỉnh sửa"], key="main_tabs"
+    )
     with tab_input:
         render_input_editor(client)
 
