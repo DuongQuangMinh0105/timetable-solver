@@ -15,9 +15,17 @@ from timetable.infrastructure.problem_loader import InvalidProblemError, problem
 Rows = list[dict[str, Any]]
 
 ROOM_COLUMNS = ("id", "name", "capacity", "room_type", "also_supports")
-TEACHER_COLUMNS = ("id", "name")
+TEACHER_COLUMNS = ("id", "name", "department")
 CLASS_COLUMNS = ("id", "name", "size", "kind")
-COURSE_COLUMNS = ("id", "name", "class_id", "teacher_id", "periods_per_week", "required_room_type")
+COURSE_COLUMNS = (
+    "id",
+    "name",
+    "class_id",
+    "teacher_id",
+    "periods_per_week",
+    "required_room_type",
+    "department",
+)
 TABLE_NAMES = ("rooms", "teachers", "classes", "courses")
 
 
@@ -52,6 +60,12 @@ def payload_to_tables(payload: dict[str, Any]) -> dict[str, Any]:
             "allowed_periods": ", ".join(str(p + 1) for p in grid["allowed_periods"]),
         },
     }
+
+
+def _department(row: dict[str, Any]) -> dict[str, str]:
+    """Cột nhóm chuyên môn là tùy chọn: trống thì bỏ hẳn khóa khỏi payload."""
+    value = row.get("department")
+    return {} if value is None else {"department": str(value)}
 
 
 def _rows(table: Rows, columns: tuple[str, ...]) -> Rows:
@@ -156,7 +170,9 @@ def tables_to_payload(
                 }
                 for r in rooms
             ],
-            "teachers": [{"id": str(r["id"]), "name": str(r["name"])} for r in teachers],
+            "teachers": [
+                {"id": str(r["id"]), "name": str(r["name"]), **_department(r)} for r in teachers
+            ],
             "class_groups": [
                 {
                     "id": str(r["id"]),
@@ -174,6 +190,7 @@ def tables_to_payload(
                     "teacher_id": str(r["teacher_id"]),
                     "periods_per_week": r["periods_per_week"],
                     "required_room_type": str(r["required_room_type"] or "standard"),
+                    **_department(r),
                 }
                 for r in courses
             ],

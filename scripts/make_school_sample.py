@@ -44,7 +44,20 @@ EXCLUDED = [
     ("G507", "Student service"),
 ]
 
-TEACHERS = [f"GV{i}" for i in range(1, 21)]
+# Số giáo viên mỗi nhóm chuyên môn; đổi số ở đây để tăng/giảm giáo viên (GV1, GV2... đánh số
+# liên tục theo thứ tự nhóm). Mặc định: GV1-5 IT, GV6-10 Business, GV11-15 Design, GV16-20 English.
+TEACHER_GROUPS = {"IT": 5, "Business": 5, "Design": 5, "English": 5}
+MAX_TEACHER_LOAD = 28  # tiết/tuần; trên mức này dễ không xếp được (giới hạn cứng là 30)
+
+TEACHERS: list[tuple[str, str]] = []  # (id, nhóm chuyên môn)
+for _group, _count in TEACHER_GROUPS.items():
+    for _ in range(_count):
+        TEACHERS.append((f"GV{len(TEACHERS) + 1}", _group))
+
+# Nhóm chuyên môn của từng môn: Tiếng Anh và Kỹ năng mềm do nhóm English dạy; môn của lớp
+# MBA và các hướng BA, MK, AC thuộc Business; môn của lớp Design thuộc Design.
+ENGLISH_COURSES = {"Tiếng Anh", "Kỹ năng mềm"}
+TRACK_DEPARTMENT = {"IT": "IT", "BA": "Business", "MK": "Business", "AC": "Business"}
 
 # Mỗi hướng học có 6 môn thường: (tên môn, số tiết/tuần).
 TRACKS = {
@@ -96,42 +109,58 @@ DESIGN_COURSES = [
 ]
 
 
+def _department(course_name: str, default: str) -> str:
+    return "English" if course_name in ENGLISH_COURSES else default
+
+
 def build(only: set[str] | None = None) -> tuple[list[tuple], list[tuple]]:
     classes: list[tuple] = []
-    courses: list[tuple] = []  # (class_id, tên, số tiết, loại phòng)
+    courses: list[tuple] = []  # (class_id, tên, số tiết, loại phòng, nhóm chuyên môn)
     for track, plan in TRACKS.items():
         for n, size in ((1, 30), (2, 28)):
             cid = f"{track}{n}"
             classes.append((cid, f"Lớp {cid}", size, "regular"))
-            courses += [(cid, name, periods, "standard") for name, periods in plan]
+            courses += [
+                (cid, name, periods, "standard", _department(name, TRACK_DEPARTMENT[track]))
+                for name, periods in plan
+            ]
     for n, size in ((1, 24), (2, 20)):
         cid = f"MBA{n}"
         classes.append((cid, f"Lớp {cid}", size, "mba"))
-        courses += [(cid, name, periods, "mba") for name, periods in MBA_COURSES]
+        courses += [(cid, name, periods, "mba", "Business") for name, periods in MBA_COURSES]
     for n, size in ((1, 26), (2, 24)):
         cid = f"DS{n}"
         classes.append((cid, f"Lớp {cid}", size, "design"))
-        courses += [(cid, name, periods, room) for name, periods, room in DESIGN_COURSES]
+        courses += [
+            (cid, name, periods, room, _department(name, "Design"))
+            for name, periods, room in DESIGN_COURSES
+        ]
 
     if only is not None:
         classes = [c for c in classes if c[0] in only]
         courses = [c for c in courses if c[0] in only]
 
-    # Chia giáo viên: môn nhiều tiết trước, mỗi môn cho giáo viên đang ít tiết nhất
-    # (và chưa dạy lớp đó), để tải đều giữa 20 giáo viên.
-    load = {t: 0 for t in TEACHERS}
-    taught: dict[str, set[str]] = {t: set() for t in TEACHERS}
+    # Chia giáo viên theo nhóm chuyên môn: môn nhiều tiết trước, mỗi môn cho giáo viên cùng nhóm
+    # đang ít tiết nhất (và chưa dạy lớp đó), để tải đều trong nhóm.
+    load = {t: 0 for t, _ in TEACHERS}
+    taught: dict[str, set[str]] = {t: set() for t, _ in TEACHERS}
     assigned: dict[int, str] = {}
     order = sorted(range(len(courses)), key=lambda i: (-courses[i][2], i))
     for i in order:
-        cid = courses[i][0]
-        teacher = min((t for t in TEACHERS if cid not in taught[t]), key=lambda t: (load[t], t))
+        cid, department = courses[i][0], courses[i][4]
+        pool = [t for t, group in TEACHERS if group == department and cid not in taught[t]]
+        if not pool:
+            raise ValueError(f"Không còn giáo viên nhóm {department} để dạy lớp {cid}.")
+        teacher = min(pool, key=lambda t: (load[t], t))
         assigned[i] = teacher
         load[teacher] += courses[i][2]
         taught[teacher].add(cid)
+    overloaded = {t: n for t, n in load.items() if n > MAX_TEACHER_LOAD}
+    if overloaded:
+        print(f"Cảnh báo: giáo viên quá tải (> {MAX_TEACHER_LOAD} tiết/tuần): {overloaded}")
     rows = [
-        (f"C{i + 1:03d}", name, cid, assigned[i], periods, room)
-        for i, (cid, name, periods, room) in enumerate(courses)
+        (f"C{i + 1:03d}", name, cid, assigned[i], periods, room, department)
+        for i, (cid, name, periods, room, department) in enumerate(courses)
     ]
     return classes, rows
 
@@ -145,15 +174,25 @@ def write(out: Path, only: set[str] | None = None) -> None:
     for room_id, name, room_type, also in ROOMS:
         ws.append([room_id, name, CAPACITY, room_type, also or None])
     ws = wb.create_sheet("Giáo viên")
-    ws.append(["id", "name"])
-    for t in TEACHERS:
-        ws.append([t, t])
+    ws.append(["id", "name", "department"])
+    for t, group in TEACHERS:
+        ws.append([t, t, group])
     ws = wb.create_sheet("Lớp")
     ws.append(["id", "name", "size", "kind"])
     for row in classes:
         ws.append(list(row))
     ws = wb.create_sheet("Môn")
-    ws.append(["id", "name", "class_id", "teacher_id", "periods_per_week", "required_room_type"])
+    ws.append(
+        [
+            "id",
+            "name",
+            "class_id",
+            "teacher_id",
+            "periods_per_week",
+            "required_room_type",
+            "department",
+        ]
+    )
     for row in courses:
         ws.append(list(row))
     ws = wb.create_sheet("Ghi chú")
@@ -169,6 +208,12 @@ def write(out: Path, only: set[str] | None = None) -> None:
         ]
     )
     ws.append(["G313", "Phòng hội họa, chỉ môn vẽ (loại art)."])
+    ws.append(
+        [
+            "Nhóm chuyên môn",
+            "Cột department: giáo viên chỉ dạy môn cùng nhóm (IT, Business, Design, English).",
+        ]
+    )
     ws.append(["Sức chứa", f"Tạm đặt {CAPACITY} cho mọi phòng, chờ số chính xác."])
     for room_id, why in EXCLUDED:
         ws.append([f"{room_id} (loại khỏi bài toán)", why])

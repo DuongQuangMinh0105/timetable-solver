@@ -43,6 +43,7 @@ class RoomInput(InputSchema):
 class TeacherInput(InputSchema):
     id: str = Field(min_length=1)
     name: str = Field(min_length=1)
+    department: str | None = None
 
 
 class ClassGroupInput(InputSchema):
@@ -59,6 +60,7 @@ class CourseInput(InputSchema):
     teacher_id: str = Field(min_length=1)
     periods_per_week: int = Field(gt=0)
     required_room_type: str = "standard"
+    department: str | None = None
 
 
 class LessonUnitInput(InputSchema):
